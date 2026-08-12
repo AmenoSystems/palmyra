@@ -1,7 +1,7 @@
 <script lang="ts">
 	import './layout.css';
 	import SearchBar from '$lib/components/SearchBar.svelte';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '$lib/assets/palm-tree.svg';
 
 	let { children } = $props();
 </script>
