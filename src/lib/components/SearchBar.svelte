@@ -32,10 +32,10 @@
 
 <div class="relative flex-1 max-w-2xl mx-4">
 	<div
-		class={`flex items-center backdrop-blur-lg bg-stone-200/30 rounded-full border border-white/20 dark:border-gray-700/30 transition-all duration-300 ${isFocused ? 'ring-2 ring-stone-400/50' : ''}`}
+		class={`flex items-center backdrop-blur-lg bg-stone-200/30 rounded-full border border-white/20 dark:border-gray-300/30 transition-all duration-300 ${isFocused ? 'ring-2 ring-stone-400/50' : ''}`}
 	>
 		<!-- Search Icon -->
-		<div class="pl-4 pr-2 text-stone-600/70">
+		<div class="pl-4 pr-2 text-stone-600/70 dark:text-stone-300/70">
 			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 			</svg>
@@ -47,7 +47,7 @@
 			bind:value={searchQuery}
 			type="text"
 			placeholder="Search..."
-			class="w-full py-2.5 px-2 bg-transparent text-stone-800 placeholder:text-stone-500/70 focus:outline-none text-sm"
+			class="w-full py-2.5 px-2 bg-transparent text-stone-800 placeholder:text-stone-500/70 dark:placeholder:text-stone-100/50 focus:outline-none text-sm"
 			onfocus={() => isFocused = true}
 			onblur={() => isFocused = false}
 			onkeydown={(e) => e.key === 'Enter' && handleSearch()}
@@ -63,8 +63,8 @@
 				<X class="w-4 h-4" />
 			</button>
 		{:else if !isFocused}
-			<div class="pr-4 pl-2 text-xs text-stone-500/80 hidden sm:flex items-center gap-1">
-                <div class="px-1.5 py-0.5 bg-stone-300/60 rounded-lg border border-stone-300/20 flex items-center gap-0.5">
+			<div class="pr-4 pl-2 text-xs text-stone-500/80 dark:text-gray-500 hidden sm:flex items-center gap-1">
+                <div class="px-1.5 py-0.5 bg-stone-300/60 dark:bg-gray-300/60 rounded-lg border border-stone-300/20 flex items-center gap-0.5">
                     <Command class="w-3.5 h-3.5" stroke-width={1.5} />
                     <span class="text-[14px] font-mono font-medium pt-0.5">S</span>
                 </div>
@@ -74,7 +74,7 @@
 		<!-- Search Button -->
 		<button
 			onclick={handleSearch}
-			class="mr-1.5 px-4 py-1.5 rounded-full bg-stone-600/20 hover:bg-stone-600/30 transition-colors text-stone-800 text-sm font-medium"
+			class="mr-1.5 px-4 py-1.5 rounded-full bg-stone-600/20 hover:bg-stone-600/30 dark:bg-stone-100/30 dark:hover:bg-stone-100/40 transition-colors text-stone-800 dark:text-stone-100 text-sm font-medium"
 			disabled={!searchQuery.trim()}
 		>
 			Search
