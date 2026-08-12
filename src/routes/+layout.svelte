@@ -1,9 +1,28 @@
 <script lang="ts">
 	import './layout.css';
 	import SearchBar from '$lib/components/SearchBar.svelte';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '$lib/assets/palm-tree.svg';
+	import { Moon, Sun } from 'lucide-svelte';
 
 	let { children } = $props();
+
+	let isDark = $state(false);
+
+	function applyTheme(dark: boolean) {
+		isDark = dark;
+		document.documentElement.classList.toggle('dark', dark);
+		localStorage.setItem('theme', dark ? 'dark' : 'light');
+	}
+
+	function toggleTheme() {
+		applyTheme(!isDark);
+	}
+
+	$effect(() => {
+		const stored = localStorage.getItem('theme');
+		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		applyTheme(stored ? stored === 'dark' : prefersDark);
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -43,21 +62,34 @@
 
 
 
-<div class="min-h-screen relative overflow-hidden bg-stone-500/50">
+<div class="min-h-screen relative overflow-hidden bg-stone-500/50 dark:bg-[#202020]/90">
 	<nav class="bg-transparent">
 		<div class="mx-10 px-4 py-2 sm:px-6 lg:px-8">
 			<div class="flex justify-between h-12">
 				<div class="flex items-center">
-					<a href="/" class="text-5xl text-stone-800 font-umbratha">PALMYRA</a>
+					<a href="/" class="text-5xl text-stone-800 dark:text-stone-100 font-umbratha">PALMYRA</a>
 				</div>
 
 				<div class="flex-1 flex justify-center max-w-3xl mx-4 py-0.5">
 					<SearchBar />
 				</div>
 
-				<div class="flex items-center space-x-4 bg-stone-300/50 rounded-full px-4 backdrop-blur-lg">
-					<a href="/about" class="text-gray-800 hover:underline">About</a>
-					<a href="/contact" class="text-gray-800 hover:underline">Contact</a>
+				<div class="flex items-center space-x-4 bg-stone-300/50 dark:bg-stone-400/30 rounded-full px-4 backdrop-blur-lg">
+					<a href="/about" class="text-gray-800 dark:text-gray-300 hover:underline">About</a>
+					<a href="/contact" class="text-gray-800 dark:text-gray-300 hover:underline">Contact</a>
+					<!-- vertical separator -->
+					<div class="w-px h-6 bg-stone-500/40 dark:bg-stone-100/40"></div>
+					<button
+						onclick={toggleTheme}
+						class="p-1.5 rounded-full hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300"
+						aria-label="Toggle dark mode"
+					>
+						{#if isDark}
+							<Sun class="w-5 h-5" />
+						{:else}
+							<Moon class="w-5 h-5" />
+						{/if}
+					</button>
 				</div>
 			</div>
 		</div>
@@ -71,14 +103,12 @@
 
   <!-- Frosted glass main content -->
 	<main class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-		<div class="backdrop-blur-lg bg-stone-200/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-6 md:p-8">
+		<div class="backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-6 md:p-8">
 		{@render children()}
 		</div>
 	</main>
 
-	<!-- Footer TODO: Put the footer at end-->
-  	<div class="text-center text-stone-800/70 text-sm py-4">
+	<footer class="text-center text-stone-800/70 dark:text-gray-500 text-sm py-4">
 		&copy; 2024 PALMYRA. All rights reserved.
-	</div>
+	</footer>
 </div>
-
