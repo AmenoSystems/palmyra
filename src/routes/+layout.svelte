@@ -76,9 +76,8 @@
 		</div>
 	</main>
 
-	<!-- Footer TODO: Put the footer at end-->
-  	<div class="text-center text-stone-800/70 text-sm py-4">
+	<footer class="text-center text-stone-800/70 text-sm py-4">
 		&copy; 2024 PALMYRA. All rights reserved.
-	</div>
+	</footer>
 </div>
 
