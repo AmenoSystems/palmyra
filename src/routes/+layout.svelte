@@ -9,28 +9,36 @@
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
 <style>
-  @keyframes blob {
-    0% { transform: translate(0px, 0px) scale(1); }
-    33% { transform: translate(30px, -50px) scale(1.1); }
-    66% { transform: translate(-20px, 20px) scale(0.9); }
-    100% { transform: translate(0px, 0px) scale(1); }
-  }
+	@font-face {
+		font-family: 'Umbratha';
+		src: url('./fonts/umbratha.ttf') format('truetype');
+		font-weight: 400;
+		font-style: normal;
+		font-display: swap;
+	}
+
+	.font-umbratha {
+		font-family: 'Umbratha', sans-serif;
+	}
+
+	@keyframes blob {
+		0% { transform: translate(0px, 0px) scale(1); }
+		33% { transform: translate(30px, -50px) scale(1.1); }
+		66% { transform: translate(-20px, 20px) scale(0.9); }
+		100% { transform: translate(0px, 0px) scale(1); }
+	}
   
-  .animate-blob {
-    animation: blob 7s infinite;
-  }
+	.animate-blob {
+		animation: blob 7s infinite;
+	}
   
-  .animation-delay-2000 {
-    animation-delay: 2s;
-  }
+	.animation-delay-2000 {
+		animation-delay: 2s;
+	}
   
-  .animation-delay-3000 {
-    animation-delay: 3s;
-  }
-  
-  /* .animation-delay-4000 {
-    animation-delay: 4s;
-  } */
+	.animation-delay-3000 {
+		animation-delay: 3s;
+	}
 </style>
 
 
@@ -38,12 +46,12 @@
 <div class="min-h-screen relative overflow-hidden bg-stone-500/50">
 	<nav class="bg-transparent">
 		<div class="mx-10 px-4 py-2 sm:px-6 lg:px-8">
-			<div class="flex justify-between h-11">
+			<div class="flex justify-between h-12">
 				<div class="flex items-center">
-					<a href="/" class="text-xl font-bold text-stone-800">PALMYRA</a>
+					<a href="/" class="text-5xl text-stone-800 font-umbratha">PALMYRA</a>
 				</div>
 
-				<div class="flex-1 flex justify-center max-w-3xl mx-4">
+				<div class="flex-1 flex justify-center max-w-3xl mx-4 py-0.5">
 					<SearchBar />
 				</div>
 
