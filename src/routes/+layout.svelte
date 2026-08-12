@@ -30,7 +30,7 @@
 <style>
 	@font-face {
 		font-family: 'Umbratha';
-		src: url('./fonts/umbratha.ttf') format('truetype');
+		src: url('/fonts/umbratha.ttf') format('truetype');
 		font-weight: 400;
 		font-style: normal;
 		font-display: swap;
