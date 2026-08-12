@@ -8,7 +8,7 @@
 	
 	onMount(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+			if ((e.metaKey || e.ctrlKey) && e.key === 's') {
 				e.preventDefault();
 				inputRef?.focus();
 			}
@@ -63,10 +63,10 @@
 				<X class="w-4 h-4" />
 			</button>
 		{:else if !isFocused}
-			<div class="pr-4 pl-2 text-xs text-stone-500/60 hidden sm:flex items-center gap-1">
+			<div class="pr-4 pl-2 text-xs text-stone-500/80 hidden sm:flex items-center gap-1">
                 <div class="px-1.5 py-0.5 bg-stone-300/60 rounded-lg border border-stone-300/20 flex items-center gap-0.5">
                     <Command class="w-3.5 h-3.5" stroke-width={1.5} />
-                    <span class="text-[14px] font-mono font-medium">K</span>
+                    <span class="text-[14px] font-mono font-medium pt-0.5">S</span>
                 </div>
 	        </div>
 		{/if}
