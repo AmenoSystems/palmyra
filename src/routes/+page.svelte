@@ -1,5 +1,6 @@
 <script>
     import ProductCard from '$lib/components/ProductCard.svelte';
+    import { Maximize2 } from 'lucide-svelte';
 
     const dummyProducts = [
         {
@@ -55,7 +56,7 @@
         id: 4,
         name: 'Ergonomic Office Chair',
         desc: 'Designed for comfort and support during long work hours.',
-        image: 'https://images.unsplash.com/photo-1587825140708-1cf3e1b8c9d0?w=400&h=400&fit=crop',
+        image: 'https://images.unsplash.com/photo-1612372606404-0ab33e7187ee?w=400&h=400&fit=crop',
         price: 149.99,
         reviewScore: 4.5,
         reviewCount: 76,
@@ -70,6 +71,12 @@
 </script>
 
 <div class="text-stone-800 dark:text-gray-300">
+    <div class="mb-4 flex items-center justify-between">
+        <a href="/listings" class="text-2xl font-bold hover:underline">Recent Listings</a>
+        <button class=" rounded-full bg-gray-100/40 hover:bg-gray-100/50 p-2 text-stone-800 hover:text-stone-900">
+            <Maximize2 class="w-4 h-4" />
+        </button>
+    </div>
 	{#if data.products.length === 0}
 		<p class="text-center">No products found.</p>
 	{:else}

@@ -42,9 +42,10 @@
       </span>
     {/if}
 
-    <p class="text-sm text-stone-500 dark:text-gray-400">
-      by {product.sellerName ?? 'Unknown seller'}
-    </p>
+    <div class="text-sm text-stone-500 dark:text-gray-400 ">
+      by <a class="hover:underline" href={`/sellers/${product.sellerId ?? 'unknown'}`}>{product.sellerName ?? 'Unknown seller'}</a>
+    </div>
+    
 
     <div class="flex items-center gap-1 pt-1">
         {#each Array.from({ length: 5 }, (_, idx) => idx) as i (i)}
@@ -75,12 +76,14 @@
   </div>
   <!--Bid count and time left-->
   <div class="flex items-start justify-between text-xs text-stone-500">
-    <span>{product.bids ?? 0} bids</span>
+    <a href={`/listings/${product.id}`} class="hover:underline">
+      {product.bids ?? 0} bids
+    </a>
     ·
     {#if product.time_left_hours < 24}
-      <span class="font-bold text-stone-600">{product.time_left_hours ?? 0}h left ({product.bid_deadline ?? 'UNKNOWN'})</span>
+      <a href={"/listings/${product.id}/deadline"} class="hover:underline font-bold text-stone-600">{product.time_left_hours ?? 0}h left ({product.bid_deadline ?? 'UNKNOWN'})</a>
     {:else}
-      <span>{product.time_left_days ?? 0}d left ({product.bid_deadline ?? 'UNKNOWN'})</span>
+      <a href={`/listings/${product.id}/deadline`} class="hover:underline text-stone-600">{product.time_left_days ?? 0}d left ({product.bid_deadline ?? 'UNKNOWN'})</a>
     {/if}
   </div>
 </div>
