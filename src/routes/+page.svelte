@@ -11,7 +11,13 @@
         reviewScore: 4.8,
         reviewCount: 234,
         itemsSold: 520,
-        sellerName: 'Urban Kicks'
+        condition: 'BRAND NEW',
+        sellerName: 'Urban Kicks',
+        bids: 24,
+        time_left_days: 3,
+        time_left_hours: 72,
+        bid_deadline: '17th Aug, 03:36 PM'
+
         },
         {
         id: 2,
@@ -22,7 +28,12 @@
         reviewScore: 4.6,
         reviewCount: 189,
         itemsSold: 310,
-        sellerName: 'AudioTech'
+        condition: 'USED',
+        sellerName: 'AudioTech',
+        bids: 12,
+        time_left_days: 0,
+        time_left_hours: 14,
+        bid_deadline: '12th Aug, 04:20 AM'
         },
         {
         id: 3,
@@ -33,8 +44,25 @@
         reviewScore: 4.9,
         reviewCount: 412,
         itemsSold: 980,
-        sellerName: 'EcoLife'
-        }
+        condition: 'NEW - OPEN BOX',
+        sellerName: 'EcoLife',
+        bids: 40,
+        time_left_days: 2,
+        time_left_hours: 48,
+        bid_deadline: '18th Aug, 12:20 PM'
+        },
+        {
+        id: 4,
+        name: 'Ergonomic Office Chair',
+        desc: 'Designed for comfort and support during long work hours.',
+        image: 'https://images.unsplash.com/photo-1587825140708-1cf3e1b8c9d0?w=400&h=400&fit=crop',
+        price: 149.99,
+        reviewScore: 4.5,
+        reviewCount: 76,
+        itemsSold: 210,
+        sellerName: 'Comfort Seating',
+        bids: 14
+        },
     ];
 
 	// const { data } = $props();

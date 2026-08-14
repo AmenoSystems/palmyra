@@ -1,6 +1,5 @@
 <script>
   import { Star } from 'lucide-svelte';
-
   let { product } = $props();
   let filledStars = $derived(Math.round(product.reviewScore ?? 0));
 </script>
@@ -21,28 +20,37 @@
 
   <!-- Product Info -->
   <div class="flex-1">
-    <h2 class="text-lg font-semibold text-stone-800 dark:text-gray-100">
+    <p class="text-lg text-stone-800 dark:text-gray-100">
       {product.name}
-    </h2>
+    </p>
+
+    {#if product.condition === 'BRAND NEW'}
+      <span class="inline-block bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 px-2 py-1 text-xs font-bold italic text-gray-200">
+          {product.condition}
+      </span>
+      {:else if product.condition === 'NEW - OPEN BOX'}
+      <span class="inline-block bg-indigo-500 px-2 py-1 text-xs font-bold italic text-gray-200">
+          {product.condition}
+      </span>
+      {:else if product.condition === 'USED'}
+      <span class="inline-block bg-yellow-300 px-2 py-1 text-xs font-bold italic text-gray-800">
+          {product.condition}
+      </span>
+      {:else}
+      <span class="inline-block bg-red-500 px-2 py-1 text-xs font-bold italic text-gray-200">
+          {product.condition ?? 'UNKNOWN'}
+      </span>
+    {/if}
 
     <p class="text-sm text-stone-500 dark:text-gray-400">
       by {product.sellerName ?? 'Unknown seller'}
     </p>
 
-    <p class="mt-2 text-sm text-stone-600 dark:text-gray-400">
-      {product.desc}
-    </p>
-  </div>
-
-  <!-- Bottom: Reviews, Price, Items Sold -->
-  <div class="mt-4 flex flex-col gap-2">
-    <div class="flex items-center justify-between">
-      <!-- Stars & Review Score -->
-      <div class="flex items-center gap-1">
+    <div class="flex items-center gap-1 pt-1">
         {#each Array.from({ length: 5 }, (_, idx) => idx) as i (i)}
           <Star
             class={"h-4 w-4 " + (i < filledStars
-              ? 'fill-yellow-400 text-yellow-400'
+              ? 'fill-yellow-500 text-yellow-500'
               : 'text-stone-400/50 dark:text-gray-500/50')}
           />
         {/each}
@@ -53,16 +61,26 @@
           ({product.reviewCount ?? 0})
         </span>
       </div>
+  </div>
 
+  <!-- Bottom: Reviews, Price, Items Sold -->
+  <div class="mt-2 flex flex-col gap-2">
+    <div class="flex items-center justify-between">
       <!-- Price -->
-      <span class="text-base font-medium text-stone-800 dark:text-gray-100">
+      <span class="text-2xl font-bold text-stone-800 dark:text-gray-100">
         ${product.price}
       </span>
+      <span class="mt-2 text-right text-xs text-stone-400 dark:text-gray-500">{product.itemsSold ?? 0} sold</span>
     </div>
-
-    <!-- Items Sold -->
-    <div class="text-right text-xs text-stone-400 dark:text-gray-500">
-      {product.itemsSold ?? 0} sold
-    </div>
+  </div>
+  <!--Bid count and time left-->
+  <div class="flex items-start justify-between text-xs text-stone-500">
+    <span>{product.bids ?? 0} bids</span>
+    ·
+    {#if product.time_left_hours < 24}
+      <span class="font-bold text-stone-600">{product.time_left_hours ?? 0}h left ({product.bid_deadline ?? 'UNKNOWN'})</span>
+    {:else}
+      <span>{product.time_left_days ?? 0}d left ({product.bid_deadline ?? 'UNKNOWN'})</span>
+    {/if}
   </div>
 </div>
