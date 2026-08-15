@@ -117,6 +117,10 @@
 						{/if}
 					</button>
 
+					<button class="hidden md:block py-2 px-4 rounded-full bg-stone-800 hover:bg-stone-900 transition-colors text-stone-200 dark:text-gray-300" aria-label="Sell an item">
+						Start Selling
+					</button>
+
 					<!-- Shopping Cart Button -->
 					<button class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300" aria-label="View cart">
 						<ShoppingCart class="w-5 h-5" />
