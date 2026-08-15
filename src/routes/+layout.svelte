@@ -86,8 +86,8 @@
 
 				<!-- Location -->
 				<div class="flex items-center mt-1">
-					<MapPin />
-					<div class="flex items-center justify-start w-full md:w-auto">
+					<MapPin class="hidden md:block"/>
+					<div class="hidden md:block items-center justify-start w-full md:w-auto">
 						<button class="bg-transparent text-stone-600 dark:text-stone-100 text-lg md:text-sm px-4 py-1 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors text-left">
 							Delivering to Guwahati, Assam
 							<br>
@@ -159,9 +159,7 @@
 
 	<!-- Frosted Glass-->
 	<main class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-		<div class="backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-6 md:p-8">
-			{@render children()}
-		</div>
+		{@render children()}
 	</main>
 	<footer class="text-center text-stone-800/70 dark:text-gray-500 text-sm py-4">
 		&copy; 2026 PALMYRA. All rights reserved.

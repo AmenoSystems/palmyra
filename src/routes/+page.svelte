@@ -70,22 +70,91 @@
     const data = { products: dummyProducts };
 </script>
 
-<div class="text-stone-800 dark:text-gray-300">
-    <div class="mb-4 flex items-center justify-between">
-        <a href="/listings" class="text-2xl font-bold hover:underline">Recent Listings</a>
-        <button class="hidden md:block rounded-full bg-gray-100/40 hover:bg-gray-100/50 p-2 text-stone-800 hover:text-stone-900">
-            <Maximize2 class="w-4 h-4" />
-        </button>
-    </div>
-	{#if data.products.length === 0}
-		<p class="text-center">No products found.</p>
-	{:else}
-        <div
-        class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        >
-        {#each data.products as product (product.id)}
-            <ProductCard {product} />
-        {/each}
+<div class="mb-5 backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-6 md:p-8">
+    <div class="text-stone-800 dark:text-gray-300">
+        <div class="mb-4 flex items-center justify-between">
+            <a href="/listings" class="text-2xl font-bold hover:underline">Featured Listings</a>
+            <button class="hidden md:block rounded-full bg-gray-100/40 hover:bg-gray-100/50 p-2 text-stone-800 hover:text-stone-900">
+                <Maximize2 class="w-4 h-4" />
+            </button>
         </div>
-	{/if}
+        {#if data.products.length === 0}
+            <p class="text-center">No products found.</p>
+        {:else}
+            <div
+            class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
+            {#each data.products as product (product.id)}
+                <ProductCard {product} />
+            {/each}
+            </div>
+        {/if}
+    </div>
+</div>
+
+
+<div class="mb-5 backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-6 md:p-8">
+    <div class="text-stone-800 dark:text-gray-300">
+        <div class="mb-4 flex items-center justify-between">
+            <a href="/listings" class="text-2xl font-bold hover:underline">Recent Listings</a>
+            <button class="hidden md:block rounded-full bg-gray-100/40 hover:bg-gray-100/50 p-2 text-stone-800 hover:text-stone-900">
+                <Maximize2 class="w-4 h-4" />
+            </button>
+        </div>
+        {#if data.products.length === 0}
+            <p class="text-center">No products found.</p>
+        {:else}
+            <div
+            class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
+            {#each data.products as product (product.id)}
+                <ProductCard {product} />
+            {/each}
+            </div>
+        {/if}
+    </div>
+</div>
+
+<div class="mb-5 backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-6 md:p-8">
+    <div class="text-stone-800 dark:text-gray-300">
+        <div class="mb-4 flex items-center justify-between">
+            <a href="/listings" class="text-2xl font-bold hover:underline">You Might Like</a>
+            <button class="hidden md:block rounded-full bg-gray-100/40 hover:bg-gray-100/50 p-2 text-stone-800 hover:text-stone-900">
+                <Maximize2 class="w-4 h-4" />
+            </button>
+        </div>
+        {#if data.products.length === 0}
+            <p class="text-center">No products found.</p>
+        {:else}
+            <div
+            class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
+            {#each data.products as product (product.id)}
+                <ProductCard {product} />
+            {/each}
+            </div>
+        {/if}
+    </div>
+</div>
+
+<div class="mb-5 backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-6 md:p-8">
+    <div class="text-stone-800 dark:text-gray-300">
+        <div class="mb-4 flex items-center justify-between">
+            <a href="/listings" class="text-2xl font-bold hover:underline">Top Sellers</a>
+            <button class="hidden md:block rounded-full bg-gray-100/40 hover:bg-gray-100/50 p-2 text-stone-800 hover:text-stone-900">
+                <Maximize2 class="w-4 h-4" />
+            </button>
+        </div>
+        {#if data.products.length === 0}
+            <p class="text-center">No products found.</p>
+        {:else}
+            <div
+            class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
+            {#each data.products as product (product.id)}
+                <ProductCard {product} />
+            {/each}
+            </div>
+        {/if}
+    </div>
 </div>
