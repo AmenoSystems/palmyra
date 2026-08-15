@@ -73,7 +73,7 @@
 <div class="text-stone-800 dark:text-gray-300">
     <div class="mb-4 flex items-center justify-between">
         <a href="/listings" class="text-2xl font-bold hover:underline">Recent Listings</a>
-        <button class=" rounded-full bg-gray-100/40 hover:bg-gray-100/50 p-2 text-stone-800 hover:text-stone-900">
+        <button class="hidden md:block rounded-full bg-gray-100/40 hover:bg-gray-100/50 p-2 text-stone-800 hover:text-stone-900">
             <Maximize2 class="w-4 h-4" />
         </button>
     </div>
