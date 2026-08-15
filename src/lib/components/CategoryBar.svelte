@@ -5,192 +5,72 @@
 	} = $props();
 
 	const categories = [
-		{ id: 'recentlylisted',         label: 'RecentlyListed' },
 		{ id: 'electronics', label: 'Electronics' },
-		{ id: 'fashion',     label: 'Fashion' },
-		{ id: 'home',        label: 'Home & Living' },
-		{ id: 'sports',      label: 'Sports' },
-		{ id: 'books',       label: 'Books' },
-		{ id: 'collectibles',label: 'Collectibles' },
-		{ id: 'automotive',  label: 'Automotive' },
-		{ id: 'art',         label: 'Art & Crafts' },
+		{ id: 'fashion', label: 'Fashion' },
+		{ id: 'home', label: 'Home & Living' },
+		{ id: 'sports', label: 'Sports' },
+		{ id: 'books', label: 'Books' },
+		{ id: 'collectibles', label: 'Collectibles' },
+		{ id: 'automotive', label: 'Automotive' },
+		{ id: 'art', label: 'Art & Crafts' },
 	];
 
-	function select(label: string) {
-		activeCategory = label;
-		mobileOpen = false; // close mobile drawer after selection
+	function select(categoryId: string) {
+		activeCategory = categoryId;
+		mobileOpen = false;
 	}
 </script>
 
-<!-- ─── Desktop: horizontal pill-bar ─── -->
-<div class="desktop-bar">
-	<div class="scroller" role="tablist" aria-label="Product categories">
-		{#each categories as cat (cat.id)}
+<div class="hidden md:block overflow-x-auto scrollbar-hide py-2">
+	<div class="flex gap-2 min-w-max px-4">
+		{#each categories as category (category.id)}
 			<button
-				role="tab"
-				aria-selected={activeCategory === cat.label}
-				onclick={() => select(cat.label)}
-				class="pill"
-				class:active={activeCategory === cat.label}
+				onclick={() => select(category.id)}
+				class={`
+					px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200
+					${activeCategory === category.id
+						? 'bg-stone-800 text-white dark:bg-gray-100 dark:text-stone-800'
+						: 'bg-stone-200/70 text-stone-700 hover:bg-stone-300/70 dark:bg-stone-700/50 dark:text-gray-300 dark:hover:bg-stone-600/50'
+					}
+				`}
 			>
-				{cat.label}
+				{category.label}
 			</button>
 		{/each}
 	</div>
 </div>
 
-<!-- ─── Mobile: dropdown panel (controlled by mobileOpen) ─── -->
-<div class="mobile-panel" class:mobile-open={mobileOpen} aria-hidden={!mobileOpen}>
-	<div class="mobile-inner">
-		{#each categories as cat (cat.id)}
+<div 
+	class={`
+		md:hidden overflow-hidden transition-all duration-300 ease-in-out
+		${mobileOpen ? 'max-h-125 opacity-100 py-2' : 'max-h-0 opacity-0 py-0'}
+	`}
+>
+	<div class="flex flex-wrap gap-2 px-4">
+		{#each categories as category (category.id)}
 			<button
-				onclick={() => select(cat.label)}
-				class="mobile-pill"
-				class:active={activeCategory === cat.label}
+				onclick={() => select(category.id)}
+				class={`
+					px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200
+					${activeCategory === category.id
+						? 'bg-stone-800 text-white dark:bg-gray-100 dark:text-stone-800'
+						: 'bg-stone-200/70 text-stone-700 hover:bg-stone-300/70 dark:bg-stone-700/50 dark:text-gray-300 dark:hover:bg-stone-600/50'
+					}
+				`}
 			>
-				{cat.label}
+				{category.label}
 			</button>
 		{/each}
 	</div>
 </div>
 
 <style>
-	/* ── Desktop bar ── */
-	.desktop-bar {
-		display: flex;
-		align-items: center;
-		padding: 6px 1rem;
-		max-width: 1440px;
-		margin: 0 auto;
-		width: 100%;
-	}
-
-	.scroller {
-		display: flex;
-		gap: 10px;
-		overflow-x: auto;
-		scrollbar-width: none;
-		-ms-overflow-style: none;
-		padding: 8px 2px;
-		flex: 1;
-	}
-
-	.scroller::-webkit-scrollbar {
+	.scrollbar-hide::-webkit-scrollbar {
 		display: none;
 	}
 
-	.pill {
-		flex-shrink: 0;
-		padding: 8px 24px;
-		border-radius: 9999px;
-		font-size: 0.925rem;
-		font-weight: 600;
-		letter-spacing: 0.02em;
-		cursor: pointer;
-		border: 1.5px solid transparent;
-		transition: all 0.2s ease;
-		white-space: nowrap;
-		background: rgba(214, 205, 195, 0.2);
-		border-color: rgba(0, 0, 0, 0.06);
-		color: rgb(60, 50, 42);
-	}
-
-	/* Light-mode idle */
-	.pill {
-		color: rgb(68 56 47);
-		background: rgba(214, 205, 195, 0.35);
-		border-color: rgba(255, 255, 255, 0.25);
-	}
-
-	:global(.dark) .pill {
-		color: rgba(231, 222, 210, 0.85);
-		background: rgba(100, 90, 80, 0.25);
-		border-color: rgba(255, 255, 255, 0.08);
-	}
-
-	.pill:hover:not(.active) {
-		background: rgba(180, 165, 148, 0.45);
-		border-color: rgba(255, 255, 255, 0.4);
-	}
-
-	:global(.dark) .pill:hover:not(.active) {
-		background: rgba(120, 110, 98, 0.4);
-	}
-
-	/* Active pill */
-	.pill.active {
-		background: rgba(87, 67, 48, 0.75);
-		color: #f5f0ea;
-		border-color: rgba(255, 255, 255, 0.2);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-	}
-
-	:global(.dark) .pill.active {
-		background: rgba(210, 190, 165, 0.3);
-		color: #ede8e0;
-		border-color: rgba(210, 190, 165, 0.3);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-	}
-
-	/* ── Mobile panel ── */
-	.mobile-panel {
-		display: none; /* shown only on mobile */
-		overflow: hidden;
-		max-height: 0;
-		transition: max-height 0.35s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.25s ease;
-		opacity: 0;
-	}
-
-	.mobile-panel.mobile-open {
-		max-height: 320px;
-		opacity: 1;
-	}
-
-	.mobile-inner {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-		padding: 10px 14px 14px;
-	}
-
-	.mobile-pill {
-		padding: 6px 14px;
-		border-radius: 9999px;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		cursor: pointer;
-		border: 1px solid rgba(255, 255, 255, 0.25);
-		background: rgba(214, 205, 195, 0.35);
-		color: rgb(68 56 47);
-		transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
-	}
-
-	:global(.dark) .mobile-pill {
-		color: rgba(231, 222, 210, 0.85);
-		background: rgba(100, 90, 80, 0.25);
-		border-color: rgba(255, 255, 255, 0.08);
-	}
-
-	.mobile-pill.active {
-		background: rgba(87, 67, 48, 0.75);
-		color: #f5f0ea;
-		border-color: rgba(255, 255, 255, 0.2);
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-	}
-
-	:global(.dark) .mobile-pill.active {
-		background: rgba(210, 190, 165, 0.3);
-		color: #ede8e0;
-		border-color: rgba(210, 190, 165, 0.3);
-	}
-
-	/* Show mobile panel only on small screens */
-	@media (max-width: 767px) {
-		.desktop-bar {
-			display: none;
-		}
-		.mobile-panel {
-			display: block;
-		}
+	.scrollbar-hide {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
 	}
 </style>
