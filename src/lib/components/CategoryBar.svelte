@@ -59,16 +59,19 @@
 	.desktop-bar {
 		display: flex;
 		align-items: center;
-		padding: 0 1rem;
+		padding: 6px 1rem;
+		max-width: 1440px;
+		margin: 0 auto;
+		width: 100%;
 	}
 
 	.scroller {
 		display: flex;
-		gap: 6px;
+		gap: 10px;
 		overflow-x: auto;
 		scrollbar-width: none;
 		-ms-overflow-style: none;
-		padding: 6px 2px;
+		padding: 8px 2px;
 		flex: 1;
 	}
 
@@ -78,21 +81,18 @@
 
 	.pill {
 		flex-shrink: 0;
-		padding: 5px 16px;
+		padding: 8px 24px;
 		border-radius: 9999px;
-		font-size: 0.8125rem;
-		font-weight: 500;
-		letter-spacing: 0.01em;
+		font-size: 0.925rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
 		cursor: pointer;
-		border: 1px solid transparent;
-		background: transparent;
-		color: inherit;
-		transition:
-			background 0.2s ease,
-			color 0.2s ease,
-			border-color 0.2s ease,
-			box-shadow 0.2s ease;
+		border: 1.5px solid transparent;
+		transition: all 0.2s ease;
 		white-space: nowrap;
+		background: rgba(214, 205, 195, 0.2);
+		border-color: rgba(0, 0, 0, 0.06);
+		color: rgb(60, 50, 42);
 	}
 
 	/* Light-mode idle */
