@@ -42,7 +42,7 @@
       </span>
     {/if}
 
-    <div class="text-sm text-stone-500 dark:text-gray-400 ">
+    <div class="text-sm text-stone-500 dark:text-gray-300 ">
       by <a class="hover:underline" href={`/sellers/${product.sellerId ?? 'unknown'}`}>{product.sellerName ?? 'Unknown seller'}</a>
     </div>
     
@@ -55,10 +55,10 @@
               : 'text-stone-400/50 dark:text-gray-500/50')}
           />
         {/each}
-        <span class="ml-1 text-xs text-stone-500 dark:text-gray-500">
+        <span class="ml-1 text-xs text-stone-500 dark:text-gray-300">
           {product.reviewScore ?? 0}
         </span>
-        <span class="text-xs text-stone-400 dark:text-gray-600">
+        <span class="text-xs text-stone-400 dark:text-gray-400">
           ({product.reviewCount ?? 0})
         </span>
       </div>
@@ -71,19 +71,19 @@
       <span class="text-2xl font-bold text-stone-800 dark:text-gray-100">
         ${product.price}
       </span>
-      <span class="mt-2 text-right text-xs text-stone-400 dark:text-gray-500">{product.itemsSold ?? 0} sold</span>
+      <span class="mt-2 text-right text-xs text-stone-400 dark:text-stone-400">{product.itemsSold ?? 0} sold</span>
     </div>
   </div>
   <!--Bid count and time left-->
-  <div class="flex items-start justify-between text-xs text-stone-500">
+  <div class="flex items-start justify-between text-xs text-stone-500 dark:text-stone-400">
     <a href={`/listings/${product.id}`} class="hover:underline">
       {product.bids ?? 0} bids
     </a>
-    ·
+    <p class="text-stone-500 dark:text-gray-400">·</p>
     {#if product.time_left_hours < 24}
-      <a href={"/listings/${product.id}/deadline"} class="hover:underline font-bold text-stone-600">{product.time_left_hours ?? 0}h left ({product.bid_deadline ?? 'UNKNOWN'})</a>
+      <a href={"/listings/${product.id}/deadline"} class="hover:underline font-bold text-stone-600 dark:text-stone-300">{product.time_left_hours ?? 0}h left ({product.bid_deadline ?? 'UNKNOWN'})</a>
     {:else}
-      <a href={`/listings/${product.id}/deadline`} class="hover:underline text-stone-600">{product.time_left_days ?? 0}d left ({product.bid_deadline ?? 'UNKNOWN'})</a>
+      <a href={`/listings/${product.id}/deadline`} class="hover:underline text-stone-600 dark:text-stone-300">{product.time_left_days ?? 0}d left ({product.bid_deadline ?? 'UNKNOWN'})</a>
     {/if}
   </div>
 </div>

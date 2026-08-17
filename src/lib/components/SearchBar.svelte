@@ -74,7 +74,7 @@
 		<!-- Search Button -->
 		<button
 			onclick={handleSearch}
-			class="mr-1.5 px-4 py-1.5 rounded-full bg-stone-600/20 hover:bg-stone-600/30 dark:bg-stone-100/30 dark:hover:bg-stone-100/40 transition-colors text-stone-800 dark:text-stone-100 text-sm font-medium"
+			class="mr-1.5 px-4 py-1.5 rounded-full bg-stone-600/20 hover:bg-stone-600/30 dark:bg-stone-100/50 dark:hover:bg-stone-100/40 transition-colors text-stone-800 dark:text-stone-800/80 text-sm font-medium"
 			disabled={!searchQuery.trim()}
 		>
 			Search

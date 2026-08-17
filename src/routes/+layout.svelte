@@ -75,7 +75,7 @@
 			<!-- Navbar Content-->
 			<div class="flex justify-between items-center h-12">
 				<!-- Hamburger Menu (visible only on mobile/tablet) -->
-				<div class="md:hidden">
+				<div class="md:hidden text-stone-800 dark:text-stone-200">
 					<HamburgerMenu bind:open={mobileMenuOpen} />
 				</div>
 
@@ -86,12 +86,12 @@
 
 				<!-- Location -->
 				<div class="flex items-center mt-1">
-					<MapPin class="hidden md:block"/>
+					<MapPin class="hidden md:block text-stone-800 dark:text-stone-100"/>
 					<div class="hidden md:block items-center justify-start w-full md:w-auto">
-						<button class="bg-transparent text-stone-600 dark:text-stone-100 text-lg md:text-sm px-4 py-1 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors text-left">
+						<button class="bg-transparent text-stone-600 dark:text-stone-300 text-lg md:text-sm px-4 py-1 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors text-left">
 							Delivering to Guwahati, Assam
 							<br>
-							<span class="font-bold text-stone-800 dark:text-stone-300 text-base">Update Location</span>
+							<span class="font-bold text-stone-800 dark:text-stone-100 text-base">Update Location</span>
 						</button>
 					</div>
 				</div>
@@ -107,7 +107,7 @@
 					<!-- Theme Toggle Button -->
 					<button
 						onclick={toggleTheme}
-						class="p-2 rounded-full md:bg-stone-300/60 hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300"
+						class="p-2 rounded-full bg-transparent hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300"
 						aria-label="Toggle dark mode"
 					>
 						{#if isDark}
@@ -117,17 +117,17 @@
 						{/if}
 					</button>
 
-					<button class="hidden md:block py-2 px-4 rounded-full bg-stone-800 hover:bg-stone-900 transition-colors text-stone-200 dark:text-gray-300" aria-label="Sell an item">
+					<button class="hidden md:block py-2 px-4 rounded-full bg-stone-800 hover:bg-stone-900 dark:bg-stone-100 dark:hover:bg-stone-300 transition-colors text-stone-200 dark:text-stone-800" aria-label="Sell an item">
 						Start Selling
 					</button>
 
 					<!-- Shopping Cart Button -->
-					<button class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300" aria-label="View cart">
+					<button class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View cart">
 						<ShoppingCart class="w-5 h-5" />
 					</button>
 
 					<!-- User Profile Button -->
-					<button class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300" aria-label="View user profile">
+					<button class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View user profile">
 						<User class="w-5 h-5" />
 					</button>
 				</div>
