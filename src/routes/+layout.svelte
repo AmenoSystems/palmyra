@@ -6,11 +6,14 @@
 	import FabButton from '$lib/components/FloatingActionBar.svelte';
 	import favicon from '$lib/assets/palm-tree.svg';
 	import { Moon, Sun, ShoppingCart, User, MapPin } from 'lucide-svelte';
+	import Authmodal from '$lib/components/AuthModal.svelte';
 
 	let { children } = $props();
 	let isDark = $state(false);
 	let mobileMenuOpen = $state(false);
 	let activeCategory = $state('recentlylisted');
+	let showAuthModal =$state(false);
+
 
 	function applyTheme(dark: boolean) {
 		isDark = dark;
@@ -20,6 +23,13 @@
 
 	function toggleMobileMenu() {
 		mobileMenuOpen = !mobileMenuOpen;
+	}
+	function openAuthModal() {
+		showAuthModal = true;
+	}
+
+	function closeAuthModal() {
+		showAuthModal = false;
 	}
 
 	function toggleTheme() {
@@ -127,7 +137,7 @@
 					</button>
 
 					<!-- User Profile Button -->
-					<button class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View user profile">
+					<button class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View user profile" onclick={openAuthModal}>
 						<User class="w-5 h-5" />
 					</button>
 				</div>
@@ -169,6 +179,7 @@
 	<div class="md:hidden">
 		<FabButton onClick={toggleMobileMenu} open={mobileMenuOpen} />
 	</div>
+	<Authmodal open={showAuthModal} onClose={closeAuthModal}/>
 </div>
 
 				
