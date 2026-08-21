@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { X, Mail, Lock, Eye, EyeOff, Leaf } from 'lucide-svelte';
 
-	let { open = false, onClose = () => {} } = $props();
+	let { open = false, onClose = () => {} }: { open?: boolean; onClose?: () => void } = $props();
 
 	let activeTab = $state<'signin' | 'signup'>('signin');
 	let showPassword = $state(false);
@@ -35,6 +35,7 @@
 	onkeydown={(e) => e.key === 'Escape' && onClose()}
 	role="dialog"
 	aria-modal="true"
+	tabindex="-1"
 >
 	<div
 		class="relative w-full max-w-md mx-4 bg-white dark:bg-stone-800 rounded-2xl shadow-2xl p-6 sm:p-8"
@@ -43,6 +44,7 @@
 		<button
 			class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors text-stone-600 dark:text-stone-400 cursor-pointer"
 			aria-label="Close"
+			onclick={onClose}
 		>
 			<X class="w-5 h-5" />
 		</button>
@@ -61,7 +63,7 @@
 		</div>
 
 		<!-- Tab Toggle -->
-		<div class="flex bg-stone-200/50 dark:bg-stone-700/40 rounded-full p-1 mb-6">
+		<div class="flex bg-stone-200/50 dark:bg-stone-700/40 rounded-full p-1 mb-6 transition">
 			<button
 				class="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer"
 				class:bg-indigo-600={activeTab === 'signin'}
@@ -93,12 +95,13 @@
 		<!-- Form -->
 		<form class="space-y-4" onsubmit={handleSubmit}>
 			<div>
-				<label class="block text-xs font-medium text-stone-700 dark:text-stone-400 mb-1.5">Email</label>
+				<label for="auth-email" class="block text-xs font-medium text-stone-700 dark:text-stone-400 mb-1.5">Email</label>
 				<div class="relative">
 					<div class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500">
 						<Mail class="w-4 h-4" />
 					</div>
 					<input
+						id="auth-email"
 						type="email"
 						placeholder="hello@palmyra.com"
 						required
@@ -109,12 +112,13 @@
 			</div>
 
 			<div>
-				<label class="block text-xs font-medium text-stone-700 dark:text-stone-400 mb-1.5">Password</label>
+				<label for="auth-password" class="block text-xs font-medium text-stone-700 dark:text-stone-400 mb-1.5">Password</label>
 				<div class="relative">
 					<div class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500">
 						<Lock class="w-4 h-4" />
 					</div>
 					<input
+						id="auth-password"
 						type={showPassword ? 'text' : 'password'}
 						placeholder="Min 8 characters"
 						required
