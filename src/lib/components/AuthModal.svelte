@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { X, Mail, Lock, Eye, EyeOff, Leaf } from 'lucide-svelte';
+	import { onMount } from 'svelte';
 
 	let { open = false, onClose = () => {} }: { open?: boolean; onClose?: () => void } = $props();
 
@@ -8,6 +9,20 @@
 	let email = $state('');
 	let password = $state('');
 	let rememberMe = $state(false);
+	let isLoading = $state(false);
+	let errorMessage = $state('');
+	let successMessage = $state('');
+	let modalRef = $state<HTMLDivElement | null>(null);
+
+	onMount(() => {
+		function handleClickOutside(e: MouseEvent) {
+			if (modalRef && !modalRef.contains(e.target as Node)) {
+				onClose();
+			}
+		}
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => document.removeEventListener('mousedown', handleClickOutside);
+	});
 
 	function toggleTab(tab: 'signin' | 'signup') {
 		activeTab = tab;
@@ -17,10 +32,30 @@
 		showPassword = !showPassword;
 	}
 
-	function handleSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
-		console.log(`[${activeTab}]`, { email, password, rememberMe });
-		// onClose(); // uncomment on success
+		errorMessage = '';
+		successMessage = '';
+		isLoading = true;
+
+		try {
+			// Simulate API call
+			await new Promise((resolve) => setTimeout(resolve, 1500));
+			
+			if (activeTab === 'signin') {
+				console.log('Sign in', { email, password, rememberMe });
+				successMessage = 'Signed in successfully!';
+				setTimeout(() => onClose(), 1000);
+			} else {
+				console.log('Sign up', { email, password });
+				successMessage = 'Account created! Please verify your email.';
+				setTimeout(() => onClose(), 1500);
+			}
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+		} finally {
+			isLoading = false;
+		}
 	}
 
 	function handleGoogleSignIn() {
@@ -39,6 +74,7 @@
 >
 	<div
 		class="relative w-full max-w-md mx-4 bg-white dark:bg-stone-800 rounded-2xl shadow-2xl p-6 sm:p-8"
+		bind:this={modalRef}
 	>
 		<!-- Close button -->
 		<button
@@ -161,11 +197,42 @@
 
 			<button
 				type="submit"
-				class="w-full py-3 rounded-xl bg-linear-to-r from-indigo-500 via-amber-400 to-rose-500 text-white dark:text-stone-900 font-semibold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
+				disabled={isLoading}
+				class={`
+					w-full py-3 rounded-xl 
+					bg-linear-to-r from-indigo-500 via-amber-400 to-rose-500 
+					text-white dark:text-stone-900 font-semibold text-sm 
+					shadow-lg hover:shadow-xl hover:-translate-y-0.5 
+					active:translate-y-0 transition-all duration-200 
+					disabled:opacity-60 disabled:cursor-not-allowed 
+					disabled:hover:translate-y-0 disabled:hover:shadow-lg
+					cursor-pointer whitespace-nowrap
+				`}
 			>
-				{activeTab === 'signin' ? 'Sign In' : 'Sign Up'}
+				{#if isLoading}
+					<span class="flex items-center justify-center gap-2">
+						<span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+						{activeTab === 'signin' ? 'Signing In...' : 'Signing Up...'}
+					</span>
+				{:else}
+					{activeTab === 'signin' ? 'Sign In' : 'Sign Up'}
+				{/if}
 			</button>
 		</form>
+
+		{#if errorMessage}
+			<div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
+				<span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
+				{errorMessage}
+			</div>
+		{/if}
+
+		{#if successMessage}
+			<div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/30 text-green-600 dark:text-green-400 text-sm flex items-center gap-2">
+				<span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+				{successMessage}
+			</div>
+		{/if}
 
 		<!-- OR divider -->
 		<div class="flex items-center gap-3 my-5">
