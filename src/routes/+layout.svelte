@@ -185,7 +185,7 @@
 							
 							<!-- Dropdown -->
 							{#if showDropdown}
-								<div class="absolute right-0 mt-2 w-48 bg-white dark:bg-stone-800 rounded-xl shadow-lg border border-stone-200 dark:border-stone-700 overflow-hidden">
+								<div class="absolute right-0 mt-2 w-48 bg-white dark:bg-stone-800 rounded-xl shadow-lg border border-stone-200 dark:border-stone-700 overflow-hidden z-50">
 									<div class="px-4 py-3 border-b border-stone-200 dark:border-stone-700">
 										<p class="text-sm font-medium text-stone-800 dark:text-stone-100 truncate">
 											{user.email}
@@ -193,7 +193,7 @@
 									</div>
 									<button
 										onclick={signOut}
-										class="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center gap-2 transition-colors"
+										class="w-full  px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center gap-2 transition-colors"
 									>
 										<LogOut class="w-4 h-4" />
 										Sign Out
