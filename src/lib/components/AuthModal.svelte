@@ -183,16 +183,17 @@
 
 {#if open}
 <div
-	class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-	onkeydown={(e) => e.key === 'Escape' && onClose()}
-	role="dialog"
-	aria-modal="true"
-	tabindex="-1"
+  class="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm"
+  onkeydown={(e) => e.key === 'Escape' && onClose()}
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
 >
-	<div
-		class="relative w-full max-w-md mx-4 bg-white dark:bg-stone-800 rounded-2xl shadow-2xl p-6 sm:p-8"
-		bind:this={modalRef}
-	>
+  <div
+    class="relative w-full max-w-md bg-white dark:bg-stone-800 rounded-2xl  shadow-2xl p-6 sm:p-8 
+           max-h-[95vh] overflow-y-auto"
+    bind:this={modalRef}
+  >
 		<!-- Close button -->
 		<button
 			class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors text-stone-600 dark:text-stone-400 cursor-pointer"

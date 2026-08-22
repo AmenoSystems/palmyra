@@ -161,7 +161,7 @@
 					</button>
 
 					<!-- Shopping Cart Button -->
-					<button class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View cart">
+					<button class=" p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View cart">
 						<ShoppingCart class="w-5 h-5" />
 					</button>
 
@@ -204,7 +204,7 @@
 					{:else}
 						<button
 							onclick={openAuthModal}
-							class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View user profile"
+							class="p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View user profile"
 						>
 							<CircleUser class="w-5 h-5" />
 						</button>
