@@ -1,19 +1,28 @@
 <script lang="ts">
-	import { X, Mail, Lock, Eye, EyeOff, Leaf } from 'lucide-svelte';
+	import type { User } from '@supabase/supabase-js';
+	import { X, Mail, Lock, Eye, EyeOff, Leaf, User as UserIcon } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { supabase } from '$lib/supabaseClient';
+	import { goto } from '$app/navigation';
 
-	let { open = false, onClose = () => {} }: { open?: boolean; onClose?: () => void } = $props();
+	let {
+			open = false,
+			onClose = () => {}
+		}: { open?: boolean; onClose?: () => void } = $props();
 
 	let activeTab = $state<'signin' | 'signup'>('signin');
 	let showPassword = $state(false);
 	let email = $state('');
 	let password = $state('');
+	let confirmPassword = $state('');
+	let username = $state('');
 	let rememberMe = $state(false);
 	let isLoading = $state(false);
 	let errorMessage = $state('');
 	let successMessage = $state('');
 	let modalRef = $state<HTMLDivElement | null>(null);
 
+		
 	onMount(() => {
 		function handleClickOutside(e: MouseEvent) {
 			if (modalRef && !modalRef.contains(e.target as Node)) {
@@ -23,7 +32,22 @@
 		document.addEventListener('mousedown', handleClickOutside);
 		return () => document.removeEventListener('mousedown', handleClickOutside);
 	});
+		
+	let user = $state<User | null>(null);
 
+	$effect(() => {
+		if (open) {
+			// Get current session when modal opens
+			supabase.auth.getSession().then(({ data: { session } }) => {
+				user = session?.user ?? null;
+				if (user) {
+					successMessage = `Already signed in as ${user.email}`;
+					setTimeout(() => onClose(), 1500);
+				}
+			});
+		}
+	});
+	
 	function toggleTab(tab: 'signin' | 'signup') {
 		activeTab = tab;
 	}
@@ -39,27 +63,120 @@
 		isLoading = true;
 
 		try {
-			// Simulate API call
-			await new Promise((resolve) => setTimeout(resolve, 1500));
-			
-			if (activeTab === 'signin') {
-				console.log('Sign in', { email, password, rememberMe });
-				successMessage = 'Signed in successfully!';
-				setTimeout(() => onClose(), 1000);
-			} else {
-				console.log('Sign up', { email, password });
-				successMessage = 'Account created! Please verify your email.';
-				setTimeout(() => onClose(), 1500);
+			if (activeTab === 'signin')
+			{
+				// Sign In
+				const { data, error } = await supabase.auth.signInWithPassword({
+					email: email.trim(),
+					password: password,
+				});
+
+				if (error) throw error;
+
+				successMessage = 'Welcome back!';
+				user = data.user;
+				
+				// Close modal after success
+				setTimeout(() => {
+					onClose();
+					// Optionally redirect to dashboard or refresh
+					goto('/');
+				}, 1000);
+
+			}
+			else
+			{
+				if (password !== confirmPassword) {
+					errorMessage = 'Passwords do not match';
+					return;
+				}
+				// Sign Up
+				const { data, error } = await supabase.auth.signUp({
+					email: email.trim(),
+					password: password,
+					options: {
+						emailRedirectTo: window.location.origin + '/auth/callback',
+						data: {
+							username: username.trim() || email.split('@')[0]
+						}
+					}
+				});
+
+				if (error) throw error;
+
+				if (data.user?.identities?.length === 0)
+				{
+					// User already exists
+					errorMessage = 'An account with this email already exists. Please sign in instead.';
+				}
+				else
+				{
+					successMessage = 'Account created! Please check your email to verify your account.';
+					// Auto-switch to sign in tab after a moment
+					setTimeout(() => {
+						activeTab = 'signin';
+						successMessage = 'Please sign in with your new account';
+					}, 3000);
+				}
 			}
 		} catch (error) {
 			errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+			console.error('Auth error:', error);
 		} finally {
 			isLoading = false;
 		}
 	}
 
-	function handleGoogleSignIn() {
-		console.log('Sign in with Google');
+	async function handleGoogleSignIn() {
+		errorMessage = '';
+		successMessage = '';
+		isLoading = true;
+
+		try {
+			const { data, error } = await supabase.auth.signInWithOAuth({
+				provider: 'google',
+				options: {
+					redirectTo: window.location.origin + '/auth/callback',
+					queryParams: {
+						access_type: 'offline',
+						prompt: 'consent',
+					},
+				},
+			});
+
+			if (error) throw error;
+			
+			// Supabase redirects automatically, but we'll close the modal
+			onClose();
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Google.';
+			console.error('Google auth error:', error);
+			isLoading = false;
+		}
+	}
+
+	async function handleForgotPassword() {
+		if (!email) {
+			errorMessage = 'Please enter your email address first.';
+			return;
+		}
+
+		isLoading = true;
+		errorMessage = '';
+		successMessage = '';
+
+		try {
+			const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+				redirectTo: window.location.origin + '/auth/reset-password',
+			});
+
+			if (error) throw error;
+			successMessage = 'Password reset email sent! Check your inbox.';
+		} catch (error) {
+			errorMessage = error instanceof Error ? error.message : 'Failed to send reset email.';
+		} finally {
+			isLoading = false;
+		}
 	}
 
 </script>
@@ -130,6 +247,25 @@
 
 		<!-- Form -->
 		<form class="space-y-4" onsubmit={handleSubmit}>
+			{#if activeTab === 'signup'}
+				<div>
+					<label for="auth-username" class="block text-xs font-medium text-stone-700 dark:text-stone-400 mb-1.5">Username</label>
+					<div class="relative">
+						<div class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500">
+							<UserIcon class="w-4 h-4" />
+						</div>
+						<input
+							id="auth-username"
+							type="text"
+							placeholder="Enter your username"
+							required
+							class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-stone-100/70 dark:bg-stone-700/40 border border-stone-300/50 dark:border-stone-600/50 text-stone-800 dark:text-stone-50 placeholder:text-stone-400/60 dark:placeholder:text-stone-500/60 focus:outline-none focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-300/50 transition-all text-sm"
+							bind:value={username}
+						/>
+					</div>
+				</div>
+			{/if}
+			
 			<div>
 				<label for="auth-email" class="block text-xs font-medium text-stone-700 dark:text-stone-400 mb-1.5">Email</label>
 				<div class="relative">
@@ -177,24 +313,46 @@
 				</div>
 			</div>
 
-			<div class="flex items-center justify-between">
-				<label class="flex items-center gap-2 cursor-pointer">
-					<input
-						type="checkbox"
-						class="w-4 h-4 rounded border-stone-300 accent-indigo-600 cursor-pointer"
-						bind:checked={rememberMe}
-					/>
-					<span class="text-xs text-stone-600 dark:text-stone-400">Remember me</span>
-				</label>
-				<button
-					type="button"
-					class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-					onclick={() => alert('Forgot password flow')}
-				>
-					Forgot password?
-				</button>
-			</div>
+			<!-- Confirm Password -->
+			{#if activeTab === 'signup'}
+				<div>
+					<label for="auth-confirm-password" class="block text-xs font-medium text-stone-700 dark:text-stone-400 mb-1.5">Confirm Password</label>
+					<div class="relative">
+						<div class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500">
+							<Lock class="w-4 h-4" />
+						</div>
+						<input
+							id="auth-confirm-password"
+							type={showPassword ? 'text' : 'password'}
+							placeholder="Confirm your password"
+							required
+							minlength="8"
+							class="w-full pl-10 pr-12 py-2.5 rounded-xl bg-stone-100/70 dark:bg-stone-700/40 border border-stone-300/50 dark:border-stone-600/50 text-stone-800 dark:text-stone-50 placeholder:text-stone-400/60 dark:placeholder:text-stone-500/60 focus:outline-none focus:ring-2 focus:ring-indigo-300/50 focus:border-indigo-300/50 transition-all text-sm"
+							bind:value={confirmPassword}
+						/>
+					</div>
+				</div>
+			{/if}
 
+			{#if activeTab === 'signin'}
+				<div class="flex items-center justify-between">
+					<label class="flex items-center gap-2 cursor-pointer">
+						<input
+							type="checkbox"
+							class="w-4 h-4 rounded border-stone-300 accent-indigo-600 cursor-pointer"
+							bind:checked={rememberMe}
+						/>
+						<span class="text-xs text-stone-600 dark:text-stone-400">Remember me</span>
+					</label>
+					<button
+						type="button"
+						class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+						onclick={handleForgotPassword}
+					>
+						Forgot password?
+					</button>
+				</div>
+			{/if}
 			<button
 				type="submit"
 				disabled={isLoading}
@@ -221,15 +379,15 @@
 		</form>
 
 		{#if errorMessage}
-			<div class="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
-				<span class="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
-				{errorMessage}
+			<div class="mt-2 mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 text-red-600 dark:text-red-400 text-sm flex items-center gap-2">
+				<span class="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+				<span>{errorMessage}</span>
 			</div>
 		{/if}
 
 		{#if successMessage}
 			<div class="mb-4 p-3 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/30 text-green-600 dark:text-green-400 text-sm flex items-center gap-2">
-				<span class="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"></span>
+				<span class="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0"></span>
 				{successMessage}
 			</div>
 		{/if}

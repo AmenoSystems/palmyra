@@ -5,8 +5,10 @@
 	import HamburgerMenu from '$lib/components/HamburgerMenu.svelte';
 	import FabButton from '$lib/components/FloatingActionBar.svelte';
 	import favicon from '$lib/assets/palm-tree.svg';
-	import { Moon, Sun, ShoppingCart, User, MapPin } from 'lucide-svelte';
+	import { Moon, Sun, ShoppingCart, LogOut, CircleUser, MapPin } from 'lucide-svelte';
+	import type { User as SupabaseUser } from '@supabase/supabase-js';
 	import Authmodal from '$lib/components/AuthModal.svelte';
+	import { supabase } from '$lib/supabaseClient';
 
 	let { children } = $props();
 	let isDark = $state(false);
@@ -14,11 +16,38 @@
 	let activeCategory = $state('recentlylisted');
 	let showAuthModal =$state(false);
 
+	let user = $state<SupabaseUser | null>(null);
+	let showDropdown = $state(false);
+
+	$effect(() => {
+		const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+			user = session?.user ?? null;
+		});
+
+		return () => subscription.unsubscribe();
+	});
+
+	async function signOut() {
+		await supabase.auth.signOut();
+		showDropdown = false;
+	}
 
 	function applyTheme(dark: boolean) {
 		isDark = dark;
 		document.documentElement.classList.toggle('dark', dark);
 		localStorage.setItem('theme', dark ? 'dark' : 'light');
+	}
+
+	function getUserAvatar(user: SupabaseUser): string {
+		// Check if user has a custom avatar
+		if (user.user_metadata?.avatar_url) {
+			return user.user_metadata.avatar_url;
+		}
+
+		const name = user.user_metadata?.username || user.email || '';
+
+		// Fallback 2: Use an avatar service with initials
+		return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=128`;
 	}
 
 	function toggleMobileMenu() {
@@ -137,9 +166,49 @@
 					</button>
 
 					<!-- User Profile Button -->
-					<button class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View user profile" onclick={openAuthModal}>
-						<User class="w-5 h-5" />
-					</button>
+					 {#if user}
+						<!-- User is signed in -->
+						<div class="relative">
+							<button
+								onclick={() => showDropdown = !showDropdown}
+								class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors"
+							>
+								<img
+									src={getUserAvatar(user)}
+									alt="User Avatar"
+									class="w-8 h-8 rounded-full object-cover"
+								/>
+								<span class="text-sm font-semibold text-stone-700 dark:text-stone-300 hidden sm:inline">
+									{user.user_metadata?.username || user.email?.split('@')[0]}
+								</span>
+							</button>
+							
+							<!-- Dropdown -->
+							{#if showDropdown}
+								<div class="absolute right-0 mt-2 w-48 bg-white dark:bg-stone-800 rounded-xl shadow-lg border border-stone-200 dark:border-stone-700 overflow-hidden">
+									<div class="px-4 py-3 border-b border-stone-200 dark:border-stone-700">
+										<p class="text-sm font-medium text-stone-800 dark:text-stone-100 truncate">
+											{user.email}
+										</p>
+									</div>
+									<button
+										onclick={signOut}
+										class="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center gap-2 transition-colors"
+									>
+										<LogOut class="w-4 h-4" />
+										Sign Out
+									</button>
+								</div>
+							{/if}
+						</div>
+					{:else}
+						<button
+							onclick={openAuthModal}
+							class="hidden md:block p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View user profile"
+						>
+							<CircleUser class="w-5 h-5" />
+						</button>
+					{/if}
 				</div>
 			</div>
 
