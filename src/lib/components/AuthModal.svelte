@@ -65,7 +65,6 @@
 		try {
 			if (activeTab === 'signin')
 			{
-				// Sign In
 				const { data, error } = await supabase.auth.signInWithPassword({
 					email: email.trim(),
 					password: password,
@@ -76,10 +75,8 @@
 				successMessage = 'Welcome back!';
 				user = data.user;
 				
-				// Close modal after success
 				setTimeout(() => {
 					onClose();
-					// Optionally redirect to dashboard or refresh
 					goto('/');
 				}, 1000);
 
@@ -90,7 +87,6 @@
 					errorMessage = 'Passwords do not match';
 					return;
 				}
-				// Sign Up
 				const { data, error } = await supabase.auth.signUp({
 					email: email.trim(),
 					password: password,
@@ -106,13 +102,11 @@
 
 				if (data.user?.identities?.length === 0)
 				{
-					// User already exists
 					errorMessage = 'An account with this email already exists. Please sign in instead.';
 				}
 				else
 				{
 					successMessage = 'Account created! Please check your email to verify your account.';
-					// Auto-switch to sign in tab after a moment
 					setTimeout(() => {
 						activeTab = 'signin';
 						successMessage = 'Please sign in with your new account';
@@ -146,7 +140,6 @@
 
 			if (error) throw error;
 			
-			// Supabase redirects automatically, but we'll close the modal
 			onClose();
 		} catch (error) {
 			errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Google.';
@@ -194,7 +187,6 @@
            max-h-[95vh] overflow-y-auto"
     bind:this={modalRef}
   >
-		<!-- Close button -->
 		<button
 			class="absolute top-4 right-4 p-1.5 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors text-stone-600 dark:text-stone-400 cursor-pointer"
 			aria-label="Close"
@@ -216,7 +208,6 @@
 			</p>
 		</div>
 
-		<!-- Tab Toggle -->
 		<div class="flex bg-stone-200/50 dark:bg-stone-700/40 rounded-full p-1 mb-6 transition">
 			<button
 				class="flex-1 py-2 px-4 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap cursor-pointer"
