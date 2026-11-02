@@ -92,15 +92,15 @@
 	.font-umbratha {
 		font-family: 'Umbratha', sans-serif;
 	}
-  
+
 	.animate-blob {
 		animation: blob 7s infinite;
 	}
-  
+
 	.animation-delay-2000 {
 		animation-delay: 2s;
 	}
-  
+
 	.animation-delay-3000 {
 		animation-delay: 3s;
 	}
@@ -134,7 +134,6 @@
 						</button>
 					</div>
 				</div>
-				
 
 				<!-- Search Bar (hidden on mobile, visible on tablet+) -->
 				<div class="hidden md:flex flex-1 justify-center max-w-3xl mx-4 py-0.5">
@@ -182,7 +181,7 @@
 									{user.user_metadata?.username || user.email?.split('@')[0]}
 								</span>
 							</button>
-							
+
 							<!-- Dropdown -->
 							{#if showDropdown}
 								<div class="absolute right-0 mt-2 w-48 bg-white dark:bg-stone-800 rounded-xl shadow-lg border border-stone-200 dark:border-stone-700 overflow-hidden z-50">
@@ -213,7 +212,7 @@
 			</div>
 
 			<!-- Mobile Search Bar (visible only when burger menu is open) -->
-			<div 
+			<div
 				class={`
 					md:hidden transition-all duration-300 ease-in-out overflow-hidden
 					${mobileMenuOpen ? 'max-h-20 opacity-100 mt-2' : 'max-h-0 opacity-0'}
@@ -250,5 +249,3 @@
 	</div>
 	<Authmodal open={showAuthModal} onClose={closeAuthModal}/>
 </div>
-
-				
