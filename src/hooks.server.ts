@@ -27,6 +27,16 @@ export const handle: Handle = async ({ event, resolve }) => {
     return error ? null : user;
   };
 
+  const user = await event.locals.getUser();
+  if (user) {
+    const key = 'last_seen_ping';
+    if (!event.cookies.get(key)) {
+      await event.locals.supabase
+        .from('profiles').update({ last_seen_at: new Date().toISOString() }).eq('id', user.id);
+      event.cookies.set(key, '1', { path: '/', maxAge: 300 }); // at most once per 5 min
+    }
+  }
+
   return resolve(event, {
     filterSerializedResponseHeaders: (name) =>
       name === 'content-range' || name === 'x-supabase-api-version'
