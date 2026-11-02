@@ -254,12 +254,13 @@
 
 	<!-- Image grid -->
 	{#if images.length > 0}
-		<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+		<div class="grid grid-cols-2 sm:grid-cols-3 gap-3" role="list">
 			{#each images as img, idx (img.id)}
-				<!-- svelte-ignore a11y-no-static-element-interactions -->
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class="relative rounded-xl overflow-hidden border-2 transition-colors {dropIdx === idx ? 'border-indigo-400' : 'border-transparent'} {img.isPrimary ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}"
 					draggable="true"
+					role="listitem"
 					ondragstart={() => onDragStart(idx)}
 					ondragover={(e) => onDragOver(e, idx)}
 					ondrop={() => onDrop(idx)}

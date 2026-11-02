@@ -1,8 +1,11 @@
-<script>
+<script lang="ts">
   import ProductCard from '$lib/components/ProductCard.svelte';
   import { Maximize2, TrendingUp, Clock } from 'lucide-svelte';
 
   let { data } = $props();
+
+  let featured = $derived((data.featured ?? []) as any[]);
+  let recent = $derived((data.recent ?? []) as any[]);
 </script>
 
 <!-- Featured Listings -->
@@ -17,11 +20,11 @@
         <Maximize2 class="w-4 h-4" />
       </a>
     </div>
-    {#if data.featured.length === 0}
+    {#if featured.length === 0}
       <p class="text-center py-8 text-stone-400 dark:text-stone-500">No active listings yet. <a href="/sell" class="text-indigo-500 hover:underline">Be the first to sell!</a></p>
     {:else}
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {#each data.featured as product (product.id)}
+        {#each featured as product (product.id)}
           <ProductCard {product} />
         {/each}
       </div>
@@ -41,11 +44,11 @@
         <Maximize2 class="w-4 h-4" />
       </a>
     </div>
-    {#if data.recent.length === 0}
+    {#if recent.length === 0}
       <p class="text-center py-8 text-stone-400 dark:text-stone-500">Nothing here yet.</p>
     {:else}
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {#each data.recent as product (product.id)}
+        {#each recent as product (product.id)}
           <ProductCard {product} />
         {/each}
       </div>

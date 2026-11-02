@@ -1,14 +1,16 @@
-<script>
+<script lang="ts">
   import { ArrowLeft, Star, Shield, Clock, Tag, Package, Eye, Gavel, ShoppingBag, Heart } from 'lucide-svelte';
-  import { supabase } from '$lib/supabaseClient';
 
   let { data } = $props();
-  let listing = $derived(data.listing);
-  let profile = $derived(listing.profiles);
-  let images = $derived(
-    (listing.listing_images ?? []).sort((a, b) => a.display_order - b.display_order)
+  let listing = $derived(data.listing as any);
+  let rawProfile = $derived(listing?.profiles as any);
+  let profile = $derived(
+    Array.isArray(rawProfile) ? rawProfile[0] : rawProfile
   );
-  let tags = $derived((listing.listing_tags ?? []).map(t => t.tag));
+  let images = $derived(
+    ((listing?.listing_images ?? []) as any[]).sort((a, b) => a.display_order - b.display_order)
+  );
+  let tags = $derived(((listing?.listing_tags ?? []) as any[]).map(t => t.tag));
 
   // Gallery state
   let activeIdx = $state(0);
@@ -16,6 +18,7 @@
 
   // Time left
   let timeLeft = $derived(() => {
+    if (!listing?.end_date) return { label: 'Active', urgent: false, ended: false };
     const ms = new Date(listing.end_date).getTime() - Date.now();
     if (ms <= 0) return { label: 'Auction ended', urgent: true, ended: true };
     const hours = Math.floor(ms / 3_600_000);
@@ -36,11 +39,11 @@
   });
 
   // Condition labels
-  const CONDITION_LABELS = {
+  const CONDITION_LABELS: Record<string, string> = {
     brand_new: 'Brand New', like_new: 'Like New', open_box: 'Open Box',
     used_good: 'Used – Good', used_fair: 'Used – Fair', for_parts: 'For Parts'
   };
-  let condLabel = $derived(CONDITION_LABELS[listing.condition] ?? listing.condition ?? 'Unknown');
+  let condLabel = $derived((listing?.condition && CONDITION_LABELS[listing.condition]) ? CONDITION_LABELS[listing.condition] : (listing?.condition ?? 'Unknown'));
 
   // Bid / BIN placeholders
   let bidAmount = $state('');
@@ -48,7 +51,7 @@
 </script>
 
 <svelte:head>
-  <title>{listing.title} | PALMYRA</title>
+  <title>{listing?.title ?? 'Listing'} | PALMYRA</title>
 </svelte:head>
 
 <!-- Back link -->
@@ -80,7 +83,7 @@
       <!-- Thumbnail strip -->
       {#if images.length > 1}
         <div class="flex gap-2 p-3 overflow-x-auto scrollbar-hide">
-          {#each images as img, idx (img.id)}
+          {#each images as img, idx (img.id || idx)}
             <button
               onclick={() => activeIdx = idx}
               class="shrink-0 w-16 aspect-[4/3] rounded-lg overflow-hidden border-2 transition-colors {activeIdx === idx ? 'border-indigo-500' : 'border-transparent hover:border-stone-400'}"
@@ -144,7 +147,7 @@
                 <Star class="w-3 h-3 {i < Math.round(profile.rating) ? 'fill-yellow-400 text-yellow-400' : 'text-stone-300/60'}" />
               {/each}
               <span class="text-xs text-stone-500 dark:text-stone-400 ml-1">
-                {profile.rating.toFixed(1)} ({profile.total_reviews ?? 0} reviews)
+                {Number(profile.rating).toFixed(1)} ({profile.total_reviews ?? 0} reviews)
               </span>
             </div>
           {/if}
@@ -163,11 +166,11 @@
       <div class="mb-4">
         <p class="text-xs text-stone-500 dark:text-stone-400 mb-1">Current bid</p>
         <p class="text-3xl font-bold text-stone-800 dark:text-stone-100">
-          ₹{listing.current_price.toLocaleString('en-IN')}
+          ₹{Number(listing.current_price ?? 0).toLocaleString('en-IN')}
         </p>
         {#if listing.buy_it_now_price}
           <p class="text-sm text-stone-500 dark:text-stone-400 mt-1">
-            Buy It Now: <strong class="text-stone-700 dark:text-stone-300">₹{listing.buy_it_now_price.toLocaleString('en-IN')}</strong>
+            Buy It Now: <strong class="text-stone-700 dark:text-stone-300">₹{Number(listing.buy_it_now_price).toLocaleString('en-IN')}</strong>
           </p>
         {/if}
       </div>
@@ -189,14 +192,14 @@
             <input
               id="bid-amount"
               type="number"
-              min={listing.current_price + 1}
+              min={(Number(listing.current_price) || 0) + 1}
               step="1"
-              placeholder={String(listing.current_price + 1)}
+              placeholder={String((Number(listing.current_price) || 0) + 1)}
               bind:value={bidAmount}
               class="w-full pl-7 pr-4 py-3 rounded-xl bg-white/60 dark:bg-stone-700/40 border border-stone-300/50 dark:border-stone-600/50 text-stone-800 dark:text-stone-50 focus:outline-none focus:ring-2 focus:ring-indigo-300/50 transition-all text-sm min-h-[48px]"
             />
           </div>
-          <p class="text-xs text-stone-400 mt-1">Min. bid: ₹{(listing.current_price + 1).toLocaleString('en-IN')}</p>
+          <p class="text-xs text-stone-400 mt-1">Min. bid: ₹{((Number(listing.current_price) || 0) + 1).toLocaleString('en-IN')}</p>
         </div>
 
         <button
@@ -210,7 +213,7 @@
         {#if listing.buy_it_now_price}
           <button class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-stone-800 dark:bg-stone-100 hover:opacity-90 text-stone-100 dark:text-stone-800 font-semibold text-sm transition-opacity min-h-[48px]">
             <ShoppingBag class="w-4 h-4" />
-            Buy It Now · ₹{listing.buy_it_now_price.toLocaleString('en-IN')}
+            Buy It Now · ₹{Number(listing.buy_it_now_price).toLocaleString('en-IN')}
           </button>
         {/if}
       {:else}
@@ -231,12 +234,14 @@
     <div class="backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-4 text-xs text-stone-600 dark:text-stone-400 space-y-2">
       <div class="flex justify-between">
         <span>Starting price</span>
-        <strong class="text-stone-700 dark:text-stone-300">₹{listing.starting_price.toLocaleString('en-IN')}</strong>
+        <strong class="text-stone-700 dark:text-stone-300">₹{Number(listing.starting_price ?? 0).toLocaleString('en-IN')}</strong>
       </div>
-      <div class="flex justify-between">
-        <span>Ends</span>
-        <strong class="text-stone-700 dark:text-stone-300">{new Date(listing.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
-      </div>
+      {#if listing.end_date}
+        <div class="flex justify-between">
+          <span>Ends</span>
+          <strong class="text-stone-700 dark:text-stone-300">{new Date(listing.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
+        </div>
+      {/if}
       <div class="flex justify-between">
         <span>Quantity</span>
         <strong class="text-stone-700 dark:text-stone-300">{listing.quantity}</strong>
@@ -253,7 +258,7 @@
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm font-medium">₹</span>
         <input
           type="number"
-          min={listing.current_price + 1}
+          min={(Number(listing.current_price) || 0) + 1}
           step="1"
           placeholder="Your bid"
           bind:value={bidAmount}

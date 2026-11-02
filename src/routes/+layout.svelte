@@ -21,7 +21,7 @@
 	let showDropdown = $state(false);
 
 	$effect(() => {
-		const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+		const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
 			user = session?.user ?? null;
 		});
 		return () => subscription.unsubscribe();

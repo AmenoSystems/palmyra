@@ -38,7 +38,8 @@
 	$effect(() => {
 		if (open) {
 			// Get current session when modal opens
-			supabase.auth.getSession().then(({ data: { session } }) => {
+			supabase.auth.getSession().then(({ data }: any) => {
+				const session = data?.session;
 				user = session?.user ?? null;
 				if (user) {
 					successMessage = `Already signed in as ${user.email}`;

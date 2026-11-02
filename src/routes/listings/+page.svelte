@@ -1,13 +1,17 @@
-<script>
+<script lang="ts">
   import ProductCard from '$lib/components/ProductCard.svelte';
   import { Search, SlidersHorizontal } from 'lucide-svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
 
   let { data } = $props();
 
-  let searchValue = $state(data.search ?? '');
-  let sortValue = $state(data.sort ?? 'recent');
+  let searchValue = $state('');
+  let sortValue = $state('recent');
+
+  $effect(() => {
+    searchValue = data.search ?? '';
+    sortValue = data.sort ?? 'recent';
+  });
 
   const SORT_OPTIONS = [
     { value: 'recent',      label: 'Most Recent' },
@@ -29,7 +33,8 @@
     applyFilters(1);
   }
 
-  let totalPages = $derived(Math.ceil(data.count / data.pageSize));
+  let totalPages = $derived(Math.ceil((data.count ?? 0) / (data.pageSize || 20)));
+  let listings = $derived((data.listings ?? []) as any[]);
 </script>
 
 <svelte:head>
@@ -74,14 +79,14 @@
   </form>
 
   <!-- Grid -->
-  {#if data.listings.length === 0}
+  {#if listings.length === 0}
     <div class="text-center py-16 text-stone-400 dark:text-stone-500">
       <p class="text-lg mb-2">No listings found</p>
       <p class="text-sm">Try a different search or <a href="/sell" class="text-indigo-500 hover:underline">create a listing</a>.</p>
     </div>
   {:else}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {#each data.listings as product (product.id)}
+      {#each listings as product (product.id)}
         <ProductCard {product} />
       {/each}
     </div>

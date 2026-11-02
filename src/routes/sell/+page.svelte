@@ -251,9 +251,9 @@
 
 				<!-- Condition -->
 				<div>
-					<label class="block text-xs font-medium text-stone-700 dark:text-stone-400 mb-2">
+					<span class="block text-xs font-medium text-stone-700 dark:text-stone-400 mb-2">
 						Condition <span class="text-red-400">*</span>
-					</label>
+					</span>
 					<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
 						{#each CONDITIONS as cond}
 							<button
