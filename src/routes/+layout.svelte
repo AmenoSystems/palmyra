@@ -9,12 +9,13 @@
 	import type { User as SupabaseUser } from '@supabase/supabase-js';
 	import Authmodal from '$lib/components/AuthModal.svelte';
 	import { supabase } from '$lib/supabaseClient';
+	import { goto } from '$app/navigation';
 
 	let { children } = $props();
 	let isDark = $state(false);
 	let mobileMenuOpen = $state(false);
 	let activeCategory = $state('recentlylisted');
-	let showAuthModal =$state(false);
+	let showAuthModal = $state(false);
 
 	let user = $state<SupabaseUser | null>(null);
 	let showDropdown = $state(false);
@@ -23,7 +24,6 @@
 		const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
 			user = session?.user ?? null;
 		});
-
 		return () => subscription.unsubscribe();
 	});
 
@@ -38,21 +38,16 @@
 		localStorage.setItem('theme', dark ? 'dark' : 'light');
 	}
 
-	function getUserAvatar(user: SupabaseUser): string {
-		// Check if user has a custom avatar
-		if (user.user_metadata?.avatar_url) {
-			return user.user_metadata.avatar_url;
-		}
-
-		const name = user.user_metadata?.username || user.email || '';
-
-		// Fallback 2: Use an avatar service with initials
+	function getUserAvatar(u: SupabaseUser): string {
+		if (u.user_metadata?.avatar_url) return u.user_metadata.avatar_url;
+		const name = u.user_metadata?.username || u.email || '';
 		return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&size=128`;
 	}
 
 	function toggleMobileMenu() {
 		mobileMenuOpen = !mobileMenuOpen;
 	}
+
 	function openAuthModal() {
 		showAuthModal = true;
 	}
@@ -62,7 +57,18 @@
 	}
 
 	function toggleTheme() {
-		applyTheme(!isDark);}
+		applyTheme(!isDark);
+	}
+
+	/** "Start Selling" — route based on auth state */
+	function handleStartSelling() {
+		if (user) {
+			goto('/sell');
+		} else {
+			goto('/auth/signin?next=/sell');
+		}
+	}
+
 	$effect(() => {
 		const stored = localStorage.getItem('theme');
 		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -145,32 +151,37 @@
 					<!-- Theme Toggle Button -->
 					<button
 						onclick={toggleTheme}
-						class="p-2 rounded-full bg-transparent hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300"
+						class="p-2 rounded-full bg-transparent hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300 min-h-[44px] min-w-[44px] flex items-center justify-center"
 						aria-label="Toggle dark mode"
 					>
 						{#if isDark}
-						<Sun class="w-5 h-5" />
+							<Sun class="w-5 h-5" />
 						{:else}
-						<Moon class="w-5 h-5" />
+							<Moon class="w-5 h-5" />
 						{/if}
 					</button>
 
-					<button class="hidden md:block py-2 px-4 rounded-full bg-stone-800 hover:bg-stone-900 dark:bg-stone-100 dark:hover:bg-stone-300 transition-colors text-stone-200 dark:text-stone-800" aria-label="Sell an item">
+					<!-- Start Selling button (desktop) -->
+					<button
+						onclick={handleStartSelling}
+						class="hidden md:block py-2 px-4 rounded-full bg-stone-800 hover:bg-stone-900 dark:bg-stone-100 dark:hover:bg-stone-300 transition-colors text-stone-200 dark:text-stone-800 font-medium text-sm min-h-[44px]"
+						aria-label="Sell an item"
+					>
 						Start Selling
 					</button>
 
 					<!-- Shopping Cart Button -->
-					<button class=" p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View cart">
+					<button class="p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300 min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="View cart">
 						<ShoppingCart class="w-5 h-5" />
 					</button>
 
 					<!-- User Profile Button -->
-					 {#if user}
+					{#if user}
 						<!-- User is signed in -->
 						<div class="relative">
 							<button
 								onclick={() => showDropdown = !showDropdown}
-								class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors"
+								class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors min-h-[44px]"
 							>
 								<img
 									src={getUserAvatar(user)}
@@ -190,9 +201,16 @@
 											{user.email}
 										</p>
 									</div>
+									<a
+										href="/sell"
+										class="w-full px-4 py-3 text-left text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center gap-2 transition-colors"
+										onclick={() => showDropdown = false}
+									>
+										Start Selling
+									</a>
 									<button
 										onclick={signOut}
-										class="w-full  px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center gap-2 transition-colors"
+										class="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center gap-2 transition-colors min-h-[44px]"
 									>
 										<LogOut class="w-4 h-4" />
 										Sign Out
@@ -203,7 +221,7 @@
 					{:else}
 						<button
 							onclick={openAuthModal}
-							class="p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300" aria-label="View user profile"
+							class="p-2 rounded-full bg-stone-300/60 hover:bg-stone-400/30 dark:bg-stone-500/50 dark:hover:bg-stone-600/50 transition-colors text-stone-800 dark:text-gray-300 min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="View user profile"
 						>
 							<CircleUser class="w-5 h-5" />
 						</button>
@@ -247,5 +265,17 @@
 	<div class="md:hidden">
 		<FabButton onClick={toggleMobileMenu} open={mobileMenuOpen} />
 	</div>
+
+	<!-- Mobile "Start Selling" FAB -->
+	<div class="md:hidden fixed bottom-20 right-4 z-40">
+		<button
+			onclick={handleStartSelling}
+			class="flex items-center gap-2 px-4 py-3 rounded-full bg-stone-800 dark:bg-stone-100 text-stone-100 dark:text-stone-800 shadow-xl text-sm font-semibold min-h-[48px]"
+			aria-label="Start Selling"
+		>
+			Start Selling
+		</button>
+	</div>
+
 	<Authmodal open={showAuthModal} onClose={closeAuthModal}/>
 </div>
