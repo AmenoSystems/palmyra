@@ -40,9 +40,10 @@
 
 	function getUserAvatar(user: SupabaseUser): string {
 		// Check if user has a custom avatar
-		if (user.user_metadata?.avatar_url) {
-			return user.user_metadata.avatar_url;
-		}
+		// if (user.user_metadata?.avatar_url) {
+		// 	return user.user_metadata.avatar_url;
+		// }
+		// TODO: Implement Supabase Storage for user avatars and return the URL if available.
 
 		const name = user.user_metadata?.username || user.email || '';
 

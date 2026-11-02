@@ -51,7 +51,7 @@
       {:else}
         <div class="grid grid-cols-3 gap-2">
           {#each box.items as p (p.username)}
-            <a href="/{p.username}" title={p.username}>
+            <a href="/u/{p.username}" title={p.username}>
               <img src={p.avatar} alt={p.username} class="aspect-square w-full rounded-lg object-cover" />
             </a>
           {/each}
@@ -164,7 +164,7 @@
               <img src={post.authorAvatar} alt="" class="h-10 w-10 rounded-lg object-cover" />
               <div class="min-w-0">
                 <p>
-                  <a href="/{post.author}" class="font-semibold hover:underline">{post.author}</a>
+                  <a href="/u/{post.author}" class="font-semibold hover:underline">{post.author}</a>
                   <span class="ml-2 text-xs {muted}">{fmt(post.created_at)}</span>
                 </p>
                 <p class="whitespace-pre-wrap break-words">{post.body}</p>
