@@ -6,7 +6,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
   const { data: profile, error: dbError } = await locals.supabase
     .from('profiles')
-    .select('id, username, full_name, avatar_url, bio, rating, total_reviews, created_at')
+    .select('id, username, full_name, avatar_id, bio, rating, total_reviews, created_at')
     .eq('username', username)
     .maybeSingle();
 
