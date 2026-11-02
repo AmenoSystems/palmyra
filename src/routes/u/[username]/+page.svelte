@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-  <title>@{profile.username}</title>
+  <title>{profile.username}'s Profile | Palmyra</title>
 </svelte:head>
 
 <main class="profile">
