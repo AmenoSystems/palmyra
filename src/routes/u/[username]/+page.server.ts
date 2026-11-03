@@ -74,6 +74,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
     listings: listingsRes.data ?? [],
     followers: { count: followersRes.count ?? 0, items: toPeople(followersRes.data) },
     following: { count: followingRes.count ?? 0, items: toPeople(followingRes.data) },
+    bio: profile.bio ?? '',
     activity: activityRes.data ?? [],
     posts: (postsRes.data ?? []).map((p: any) => ({
       id: p.id as string,
@@ -120,7 +121,7 @@ export const actions: Actions = {
     if (!user) return fail(401, { postError: 'Log in to post' });
 
     const body = String((await request.formData()).get('body') ?? '').trim();
-    if (!body || body.length > 2000) return fail(400, { postError: 'Post must be 1–2000 characters' });
+    if (!body || body.length > 2000) return fail(400, { postError: 'Post must be 1-2000 characters' });
 
     const targetId = await getTargetId(locals, params.username);
     if (!targetId) return fail(400, { postError: 'Invalid user' });

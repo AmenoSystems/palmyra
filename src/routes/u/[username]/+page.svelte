@@ -78,6 +78,8 @@
         </div>
         <div class="flex justify-between"><dt class={muted}>Reviews</dt><dd>{profile.total_reviews ?? 0}</dd></div>
         <div class="flex justify-between"><dt class={muted}>Active listings</dt><dd>{data.listings.length}</dd></div>
+        <div class="flex justify-between"><dt class={muted}>Followers</dt><dd>{data.followers.count}</dd></div>
+        <div class="flex justify-between"><dt class={muted}>Following</dt><dd>{data.following.count}</dd></div>
       </dl>
 
       {#if !data.isOwnProfile}
