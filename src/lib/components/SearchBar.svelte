@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-    import { Command, X } from 'lucide-svelte';
+	import { Command, X } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	
 	let searchQuery = $state('');
 	let isFocused = $state(false);
@@ -17,10 +19,19 @@
 		document.addEventListener('keydown', handleKeyDown);
 		return () => document.removeEventListener('keydown', handleKeyDown);
 	});
+
+	// Sync with URL query on mount / route change
+	$effect(() => {
+		const q = $page.url.searchParams.get('q');
+		if (q && !searchQuery) {
+			searchQuery = q;
+		}
+	});
 	
 	function handleSearch() {
-		if (searchQuery.trim()) {
-			console.log('Searching for:', searchQuery);
+		const trimmed = searchQuery.trim();
+		if (trimmed) {
+			goto(`/listings?q=${encodeURIComponent(trimmed)}`);
 		}
 	}
 	
@@ -46,8 +57,8 @@
 			bind:this={inputRef}
 			bind:value={searchQuery}
 			type="text"
-			placeholder="Search..."
-			class="w-full py-2.5 px-2 bg-transparent text-stone-800 placeholder:text-stone-500/70 dark:placeholder:text-stone-100/50 focus:outline-none text-sm"
+			placeholder="Search auctions & listings..."
+			class="w-full py-2.5 px-2 bg-transparent text-stone-800 dark:text-stone-100 placeholder:text-stone-500/70 dark:placeholder:text-stone-300/60 focus:outline-none text-sm"
 			onfocus={() => isFocused = true}
 			onblur={() => isFocused = false}
 			onkeydown={(e) => e.key === 'Enter' && handleSearch()}
@@ -57,24 +68,24 @@
 		{#if searchQuery}
 			<button
 				onclick={clearSearch}
-				class="mr-2 p-1 rounded-full hover:bg-stone-400/20 transition-colors text-stone-600/70"
+				class="mr-2 p-1 rounded-full hover:bg-stone-400/20 transition-colors text-stone-600/70 dark:text-stone-300/70 cursor-pointer"
 				aria-label="Clear search"
 			>
 				<X class="w-4 h-4" />
 			</button>
 		{:else if !isFocused}
-			<div class="pr-4 pl-2 text-xs text-stone-500/80 dark:text-gray-500 hidden sm:flex items-center gap-1">
-                <div class="px-1.5 py-0.5 bg-stone-300/60 dark:bg-gray-300/60 rounded-lg border border-stone-300/20 flex items-center gap-0.5">
-                    <Command class="w-3.5 h-3.5" stroke-width={1.5} />
-                    <span class="text-[14px] font-mono font-medium pt-0.5">K</span>
-                </div>
-	        </div>
+			<div class="pr-4 pl-2 text-xs text-stone-500/80 dark:text-gray-400 hidden sm:flex items-center gap-1">
+				<div class="px-1.5 py-0.5 bg-stone-300/60 dark:bg-stone-700/60 rounded-lg border border-stone-300/20 flex items-center gap-0.5">
+					<Command class="w-3.5 h-3.5" stroke-width={1.5} />
+					<span class="text-[14px] font-mono font-medium pt-0.5">K</span>
+				</div>
+			</div>
 		{/if}
 		
 		<!-- Search Button -->
 		<button
 			onclick={handleSearch}
-			class="mr-1.5 px-4 py-1.5 rounded-full bg-stone-600/20 hover:bg-stone-600/30 dark:bg-stone-100/50 dark:hover:bg-stone-100/40 transition-colors text-stone-800 dark:text-stone-800/80 text-sm font-medium"
+			class="mr-1.5 px-4 py-1.5 rounded-full bg-stone-600/20 hover:bg-stone-600/30 dark:bg-stone-100/50 dark:hover:bg-stone-100/40 transition-colors text-stone-800 dark:text-stone-900 text-sm font-medium cursor-pointer"
 			disabled={!searchQuery.trim()}
 		>
 			Search

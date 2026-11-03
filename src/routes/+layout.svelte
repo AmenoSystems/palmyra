@@ -10,6 +10,7 @@
 	import Authmodal from '$lib/components/AuthModal.svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 
 	let { children } = $props();
 	let isDark = $state(false);
@@ -262,20 +263,24 @@
 	</footer>
 
 	<!-- Floating Action Search Button for Mobile -->
-	<div class="md:hidden">
-		<FabButton onClick={toggleMobileMenu} open={mobileMenuOpen} />
-	</div>
+	{#if $page.url.pathname !== '/sell'}
+		<div class="md:hidden">
+			<FabButton onClick={toggleMobileMenu} open={mobileMenuOpen} />
+		</div>
+	{/if}
 
 	<!-- Mobile "Start Selling" FAB -->
-	<div class="md:hidden fixed bottom-20 right-4 z-40">
-		<button
-			onclick={handleStartSelling}
-			class="flex items-center gap-2 px-4 py-3 rounded-full bg-stone-800 dark:bg-stone-100 text-stone-100 dark:text-stone-800 shadow-xl text-sm font-semibold min-h-[48px]"
-			aria-label="Start Selling"
-		>
-			Start Selling
-		</button>
-	</div>
+	{#if $page.url.pathname !== '/sell' && !$page.url.pathname.startsWith('/listings/')}
+		<div class="md:hidden fixed bottom-20 right-4 z-40">
+			<button
+				onclick={handleStartSelling}
+				class="flex items-center gap-2 px-4 py-3 rounded-full bg-stone-800 dark:bg-stone-100 text-stone-100 dark:text-stone-800 shadow-xl text-sm font-semibold min-h-[48px] cursor-pointer"
+				aria-label="Start Selling"
+			>
+				Start Selling
+			</button>
+		</div>
+	{/if}
 
 	<Authmodal open={showAuthModal} onClose={closeAuthModal}/>
 </div>

@@ -1,7 +1,8 @@
 <script lang="ts">
   import { ArrowLeft, Star, Shield, Clock, Tag, Package, Eye, Gavel, ShoppingBag, Heart } from 'lucide-svelte';
+  import { enhance } from '$app/forms';
 
-  let { data } = $props();
+  let { data, form }: { data: any; form: any } = $props();
   let listing = $derived(data.listing as any);
   let rawProfile = $derived(listing?.profiles as any);
   let profile = $derived(
@@ -20,7 +21,9 @@
   let timeLeft = $derived(() => {
     if (!listing?.end_date) return { label: 'Active', urgent: false, ended: false };
     const ms = new Date(listing.end_date).getTime() - Date.now();
-    if (ms <= 0) return { label: 'Auction ended', urgent: true, ended: true };
+    if (ms <= 0 || listing.status === 'sold' || listing.status === 'ended') {
+      return { label: listing.status === 'sold' ? 'Sold' : 'Auction ended', urgent: true, ended: true };
+    }
     const hours = Math.floor(ms / 3_600_000);
     if (hours < 1) {
       const mins = Math.floor(ms / 60_000);
@@ -45,9 +48,12 @@
   };
   let condLabel = $derived((listing?.condition && CONDITION_LABELS[listing.condition]) ? CONDITION_LABELS[listing.condition] : (listing?.condition ?? 'Unknown'));
 
-  // Bid / BIN placeholders
   let bidAmount = $state('');
   let isWatchlisted = $state(false);
+  let isBidding = $state(false);
+  let isBuying = $state(false);
+
+  let isOwnListing = $derived(data.currentUser?.id === listing?.seller_id);
 </script>
 
 <svelte:head>
@@ -61,6 +67,13 @@
     Back to listings
   </a>
 </div>
+
+<!-- Status Message / Alert -->
+{#if form?.message}
+  <div class="mb-5 p-4 rounded-2xl {form.success ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-800' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-800'} text-sm font-medium">
+    {form.message}
+  </div>
+{/if}
 
 <div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
   <!-- ── LEFT: Images + Details ──────────────────────────────── -->
@@ -86,7 +99,7 @@
           {#each images as img, idx (img.id || idx)}
             <button
               onclick={() => activeIdx = idx}
-              class="shrink-0 w-16 aspect-[4/3] rounded-lg overflow-hidden border-2 transition-colors {activeIdx === idx ? 'border-indigo-500' : 'border-transparent hover:border-stone-400'}"
+              class="shrink-0 w-16 aspect-[4/3] rounded-lg overflow-hidden border-2 transition-colors cursor-pointer {activeIdx === idx ? 'border-indigo-500 ring-2 ring-indigo-400' : 'border-transparent hover:border-stone-400'}"
               aria-label={`View image ${idx + 1}`}
             >
               <img src={img.image_url} alt={`Image ${idx + 1}`} class="w-full h-full object-cover" loading="lazy" />
@@ -104,7 +117,7 @@
 
       <!-- Meta row -->
       <div class="flex flex-wrap gap-2 mb-4 text-xs">
-        <span class="px-2.5 py-1 rounded-full bg-stone-200/60 dark:bg-stone-700/60 text-stone-700 dark:text-stone-300">
+        <span class="px-2.5 py-1 rounded-full bg-stone-200/60 dark:bg-stone-700/60 text-stone-700 dark:text-stone-300 font-medium">
           {condLabel}
         </span>
         <span class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-stone-200/60 dark:bg-stone-700/60 text-stone-500 dark:text-stone-400">
@@ -152,7 +165,7 @@
             </div>
           {/if}
         </div>
-        <div class="ml-auto flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+        <div class="ml-auto flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium">
           <Shield class="w-3.5 h-3.5" /> Verified
         </div>
       </div>
@@ -183,47 +196,100 @@
         </span>
       </div>
 
-      {#if !timeLeft().ended}
-        <!-- Bid input -->
-        <div class="mb-3">
-          <label for="bid-amount" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1.5">Your bid (₹)</label>
-          <div class="relative">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 font-medium">₹</span>
-            <input
-              id="bid-amount"
-              type="number"
-              min={(Number(listing.current_price) || 0) + 1}
-              step="1"
-              placeholder={String((Number(listing.current_price) || 0) + 1)}
-              bind:value={bidAmount}
-              class="w-full pl-7 pr-4 py-3 rounded-xl bg-white/60 dark:bg-stone-700/40 border border-stone-300/50 dark:border-stone-600/50 text-stone-800 dark:text-stone-50 focus:outline-none focus:ring-2 focus:ring-indigo-300/50 transition-all text-sm min-h-[48px]"
-            />
-          </div>
-          <p class="text-xs text-stone-400 mt-1">Min. bid: ₹{((Number(listing.current_price) || 0) + 1).toLocaleString('en-IN')}</p>
+      {#if isOwnListing}
+        <div class="p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs">
+          This is your active listing.
         </div>
-
-        <button
-          class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-colors shadow-lg mb-2 min-h-[52px]"
-          disabled={!bidAmount}
+      {:else if !timeLeft().ended}
+        <!-- Bid Form -->
+        <form
+          method="POST"
+          action="?/placeBid"
+          use:enhance={() => {
+            isBidding = true;
+            return async ({ update }) => {
+              await update();
+              isBidding = false;
+              bidAmount = '';
+            };
+          }}
+          class="mb-3 space-y-3"
         >
-          <Gavel class="w-4 h-4" />
-          Place Bid
-        </button>
+          <div>
+            <label for="bid-amount" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1.5">Your bid (₹)</label>
+            <div class="relative">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 font-medium">₹</span>
+              <input
+                id="bid-amount"
+                name="bid_amount"
+                type="number"
+                min={(Number(listing.current_price) || 0) + 1}
+                step="1"
+                placeholder={String((Number(listing.current_price) || 0) + 1)}
+                bind:value={bidAmount}
+                required
+                class="w-full pl-7 pr-4 py-3 rounded-xl bg-white/60 dark:bg-stone-700/40 border border-stone-300/50 dark:border-stone-600/50 text-stone-800 dark:text-stone-50 focus:outline-none focus:ring-2 focus:ring-indigo-300/50 transition-all text-sm min-h-[48px]"
+              />
+            </div>
+            <p class="text-xs text-stone-400 mt-1">Min. bid: ₹{((Number(listing.current_price) || 0) + 1).toLocaleString('en-IN')}</p>
+          </div>
 
-        {#if listing.buy_it_now_price}
-          <button class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-stone-800 dark:bg-stone-100 hover:opacity-90 text-stone-100 dark:text-stone-800 font-semibold text-sm transition-opacity min-h-[48px]">
-            <ShoppingBag class="w-4 h-4" />
-            Buy It Now · ₹{Number(listing.buy_it_now_price).toLocaleString('en-IN')}
+          <button
+            type="submit"
+            class="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm transition-colors shadow-lg min-h-[52px] cursor-pointer"
+            disabled={!bidAmount || isBidding}
+          >
+            {#if isBidding}
+              <span class="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              Placing Bid…
+            {:else}
+              <Gavel class="w-4 h-4" />
+              Place Bid
+            {/if}
           </button>
+        </form>
+
+        <!-- Buy It Now Form -->
+        {#if listing.buy_it_now_price}
+          <form
+            method="POST"
+            action="?/buyNow"
+            use:enhance={() => {
+              isBuying = true;
+              return async ({ update }) => {
+                await update();
+                isBuying = false;
+              };
+            }}
+          >
+            <button
+              type="submit"
+              disabled={isBuying}
+              onclick={(e) => {
+                if (!confirm(`Confirm Buy It Now for ₹${Number(listing.buy_it_now_price).toLocaleString('en-IN')}?`)) {
+                  e.preventDefault();
+                }
+              }}
+              class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-stone-800 dark:bg-stone-100 hover:opacity-90 disabled:opacity-50 text-stone-100 dark:text-stone-800 font-semibold text-sm transition-opacity min-h-[48px] cursor-pointer"
+            >
+              {#if isBuying}
+                <span class="inline-block w-4 h-4 border-2 border-stone-400 border-t-stone-800 rounded-full animate-spin"></span>
+                Processing…
+              {:else}
+                <ShoppingBag class="w-4 h-4" />
+                Buy It Now · ₹{Number(listing.buy_it_now_price).toLocaleString('en-IN')}
+              {/if}
+            </button>
+          </form>
         {/if}
       {:else}
-        <p class="text-center text-stone-500 dark:text-stone-400 text-sm py-2">This auction has ended.</p>
+        <p class="text-center text-stone-500 dark:text-stone-400 text-sm py-2 font-medium">This auction has ended.</p>
       {/if}
 
       <!-- Watchlist -->
       <button
         onclick={() => isWatchlisted = !isWatchlisted}
-        class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-stone-300/50 dark:border-stone-600/50 text-stone-600 dark:text-stone-400 hover:bg-stone-100/40 dark:hover:bg-stone-700/40 text-sm transition-colors mt-3 min-h-[44px]"
+        class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-stone-300/50 dark:border-stone-600/50 text-stone-600 dark:text-stone-400 hover:bg-stone-100/40 dark:hover:bg-stone-700/40 text-sm transition-colors mt-3 min-h-[44px] cursor-pointer"
       >
         <Heart class="w-4 h-4 {isWatchlisted ? 'fill-rose-500 text-rose-500' : ''}" />
         {isWatchlisted ? 'Watchlisted' : 'Add to Watchlist'}
@@ -251,30 +317,69 @@
 </div>
 
 <!-- Mobile sticky bid bar -->
-<div class="lg:hidden fixed bottom-0 inset-x-0 z-40 p-3 bg-white/90 dark:bg-stone-900/90 backdrop-blur-lg border-t border-stone-200 dark:border-stone-700 safe-area-inset-bottom">
-  <div class="flex gap-3 max-w-xl mx-auto">
-    {#if !timeLeft().ended}
-      <div class="flex-1 relative">
-        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm font-medium">₹</span>
-        <input
-          type="number"
-          min={(Number(listing.current_price) || 0) + 1}
-          step="1"
-          placeholder="Your bid"
-          bind:value={bidAmount}
-          class="w-full pl-7 pr-3 py-3 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300/50 min-h-[48px]"
-        />
-      </div>
-      <button class="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm min-h-[48px]" disabled={!bidAmount}>
-        <Gavel class="w-4 h-4" /> Bid
-      </button>
+<div class="lg:hidden fixed bottom-0 inset-x-0 z-40 p-3 bg-white/95 dark:bg-stone-900/95 backdrop-blur-lg border-t border-stone-200 dark:border-stone-700 safe-area-inset-bottom">
+  <div class="flex gap-2 max-w-xl mx-auto items-center">
+    {#if !timeLeft().ended && !isOwnListing}
+      <form
+        method="POST"
+        action="?/placeBid"
+        use:enhance={() => {
+          isBidding = true;
+          return async ({ update }) => {
+            await update();
+            isBidding = false;
+            bidAmount = '';
+          };
+        }}
+        class="flex-1 flex gap-2"
+      >
+        <div class="flex-1 relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm font-medium">₹</span>
+          <input
+            type="number"
+            name="bid_amount"
+            min={(Number(listing.current_price) || 0) + 1}
+            step="1"
+            placeholder={String((Number(listing.current_price) || 0) + 1)}
+            bind:value={bidAmount}
+            required
+            class="w-full pl-7 pr-3 py-3 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-50 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300/50 min-h-[48px]"
+          />
+        </div>
+        <button
+          type="submit"
+          class="flex items-center gap-1.5 px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold text-sm min-h-[48px] cursor-pointer"
+          disabled={!bidAmount || isBidding}
+        >
+          <Gavel class="w-4 h-4" /> Bid
+        </button>
+      </form>
+
+      {#if listing.buy_it_now_price}
+        <form
+          method="POST"
+          action="?/buyNow"
+          use:enhance={() => {
+            isBuying = true;
+            return async ({ update }) => {
+              await update();
+              isBuying = false;
+            };
+          }}
+        >
+          <button
+            type="submit"
+            disabled={isBuying}
+            class="px-3 py-3 rounded-xl bg-stone-800 dark:bg-stone-100 text-stone-100 dark:text-stone-800 font-semibold text-xs min-h-[48px] whitespace-nowrap cursor-pointer"
+          >
+            Buy Now
+          </button>
+        </form>
+      {/if}
     {:else}
-      <div class="flex-1 text-center text-stone-500 dark:text-stone-400 text-sm py-3">Auction ended</div>
-    {/if}
-    {#if listing.buy_it_now_price && !timeLeft().ended}
-      <button class="px-4 py-3 rounded-xl bg-stone-800 dark:bg-stone-100 text-stone-100 dark:text-stone-800 font-semibold text-sm min-h-[48px] whitespace-nowrap">
-        Buy Now
-      </button>
+      <div class="flex-1 text-center text-stone-500 dark:text-stone-400 text-sm py-3 font-medium">
+        {isOwnListing ? 'Your listing' : 'Auction ended'}
+      </div>
     {/if}
   </div>
 </div>
