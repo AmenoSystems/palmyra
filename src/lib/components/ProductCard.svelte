@@ -1,89 +1,176 @@
-<script>
-  import { Star } from 'lucide-svelte';
-  let { product } = $props();
-  let filledStars = $derived(Math.round(product.reviewScore ?? 0));
+<script lang="ts">
+  import { Star, Clock } from 'lucide-svelte';
+
+  interface ListingImage {
+    image_url: string;
+    is_primary: boolean;
+    display_order: number;
+  }
+
+  interface Seller {
+    username: string;
+    rating?: number;
+  }
+
+  interface Listing {
+    id: string;
+    slug: string;
+    title: string;
+    condition: string;
+    starting_price: number;
+    current_price: number;
+    buy_it_now_price?: number | null;
+    end_date: string;
+    listing_images?: ListingImage[];
+    profiles?: Seller | null;
+    bid_count?: number;
+    // Legacy dummy props (still supported)
+    name?: string;
+    image?: string;
+    price?: number;
+    reviewScore?: number;
+    reviewCount?: number;
+    itemsSold?: number;
+    sellerName?: string;
+    bids?: number;
+    time_left_hours?: number;
+    time_left_days?: number;
+    bid_deadline?: string;
+  }
+
+  let { product }: { product: Listing } = $props();
+
+  // ── Derived display values ────────────────────────────────────
+  let displayTitle = $derived(product.title ?? product.name ?? 'Untitled');
+  let displaySlug = $derived(product.slug ?? product.id ?? '#');
+  let displayPrice = $derived(product.current_price ?? product.starting_price ?? product.price ?? 0);
+  let displaySeller = $derived(
+    product.profiles?.username ?? product.sellerName ?? 'Unknown seller'
+  );
+  let displayRating = $derived(product.profiles?.rating ?? product.reviewScore ?? 0);
+  let filledStars = $derived(Math.round(displayRating));
+  let displayBids = $derived(product.bid_count ?? product.bids ?? 0);
+
+  // Primary image (4:3)
+  let primaryImage = $derived(() => {
+    if (product.listing_images && product.listing_images.length > 0) {
+      const primary = product.listing_images.find(i => i.is_primary);
+      return primary?.image_url ?? product.listing_images[0].image_url;
+    }
+    return product.image ?? null;
+  });
+
+  // Time left
+  let timeLeft = $derived(() => {
+    if (product.end_date) {
+      const ms = new Date(product.end_date).getTime() - Date.now();
+      if (ms <= 0) return { label: 'Ended', urgent: true };
+      const hours = Math.floor(ms / 3_600_000);
+      if (hours < 24) return { label: `${hours}h left`, urgent: true };
+      const days = Math.floor(hours / 24);
+      return { label: `${days}d left`, urgent: false };
+    }
+    if (product.time_left_hours !== undefined) {
+      const h = product.time_left_hours ?? 0;
+      return h < 24
+        ? { label: `${h}h left`, urgent: true }
+        : { label: `${product.time_left_days ?? 0}d left`, urgent: false };
+    }
+    return null;
+  });
+
+  // Condition badge styles
+  const CONDITION_STYLES: Record<string, string> = {
+    brand_new:  'bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 text-gray-200',
+    like_new:   'bg-indigo-500 text-gray-200',
+    open_box:   'bg-indigo-400 text-gray-200',
+    used_good:  'bg-yellow-300 text-gray-800',
+    used_fair:  'bg-amber-400 text-gray-800',
+    for_parts:  'bg-red-500 text-gray-200',
+    // Legacy
+    'BRAND NEW':      'bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 text-gray-200',
+    'NEW - OPEN BOX': 'bg-indigo-500 text-gray-200',
+    'USED':           'bg-yellow-300 text-gray-800',
+  };
+
+  const CONDITION_LABELS: Record<string, string> = {
+    brand_new:  'BRAND NEW',
+    like_new:   'LIKE NEW',
+    open_box:   'OPEN BOX',
+    used_good:  'USED – GOOD',
+    used_fair:  'USED – FAIR',
+    for_parts:  'FOR PARTS',
+  };
+
+  let condStyle = $derived(CONDITION_STYLES[product.condition] ?? 'bg-red-500 text-gray-200');
+  let condLabel = $derived(CONDITION_LABELS[product.condition] ?? (product.condition ?? 'UNKNOWN').toUpperCase());
 </script>
 
-<div
-  class="flex flex-col justify-between rounded-2xl border border-white/20 bg-stone-100/40 p-5 shadow-lg backdrop-blur-lg transition-transform hover:-translate-y-1 hover:shadow-xl dark:border-gray-700/30 dark:bg-stone-500/20"
+<a
+  href={`/listings/${displaySlug}`}
+  class="flex flex-col justify-between rounded-2xl border border-white/20 bg-stone-100/40 shadow-lg backdrop-blur-lg transition-transform hover:-translate-y-1 hover:shadow-xl dark:border-gray-700/30 dark:bg-stone-500/20 overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-400"
+  aria-label={displayTitle}
 >
-  <!-- Product Image -->
-  <div class="relative mb-4 h-40 w-full overflow-hidden rounded-lg bg-stone-200 dark:bg-stone-700">
-    {#if product.image}
-      <img src={product.image} alt={product.name} class="h-full w-full object-cover" />
+  <!-- Product Image — enforced 4:3 aspect ratio -->
+  <div class="relative w-full aspect-[4/3] overflow-hidden bg-stone-200 dark:bg-stone-700">
+    {#if primaryImage()}
+      <img
+        src={primaryImage()}
+        alt={displayTitle}
+        class="h-full w-full object-cover"
+        loading="lazy"
+      />
     {:else}
       <div class="flex h-full items-center justify-center text-sm text-stone-400 dark:text-stone-500">
         No image
       </div>
     {/if}
+
+    <!-- Condition badge overlay -->
+    <span class="absolute top-2 left-2 px-2 py-0.5 text-xs font-bold italic rounded {condStyle}">
+      {condLabel}
+    </span>
   </div>
 
   <!-- Product Info -->
-  <div class="flex-1">
-    <p class="text-lg text-stone-800 dark:text-gray-100">
-      {product.name}
+  <div class="flex-1 p-4">
+    <p class="text-sm font-medium text-stone-800 dark:text-gray-100 line-clamp-2 leading-snug mb-1">
+      {displayTitle}
     </p>
 
-    {#if product.condition === 'BRAND NEW'}
-      <span class="inline-block bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 px-2 py-1 text-xs font-bold italic text-gray-200">
-          {product.condition}
-      </span>
-      {:else if product.condition === 'NEW - OPEN BOX'}
-      <span class="inline-block bg-indigo-500 px-2 py-1 text-xs font-bold italic text-gray-200">
-          {product.condition}
-      </span>
-      {:else if product.condition === 'USED'}
-      <span class="inline-block bg-yellow-300 px-2 py-1 text-xs font-bold italic text-gray-800">
-          {product.condition}
-      </span>
-      {:else}
-      <span class="inline-block bg-red-500 px-2 py-1 text-xs font-bold italic text-gray-200">
-          {product.condition ?? 'UNKNOWN'}
-      </span>
-    {/if}
-
-    <div class="text-sm text-stone-500 dark:text-gray-300 ">
-      by <a class="hover:underline" href={`/sellers/${product.sellerId ?? 'unknown'}`}>{product.sellerName ?? 'Unknown seller'}</a>
+    <div class="text-xs text-stone-500 dark:text-gray-400 mb-1.5">
+      by <span class="hover:underline">{displaySeller}</span>
     </div>
-    
 
-    <div class="flex items-center gap-1 pt-1">
-        {#each Array.from({ length: 5 }, (_, idx) => idx) as i (i)}
+    <!-- Stars -->
+    {#if displayRating > 0}
+      <div class="flex items-center gap-0.5 mb-2">
+        {#each Array.from({ length: 5 }, (_, i) => i) as i (i)}
           <Star
-            class={"h-4 w-4 " + (i < filledStars
+            class={"h-3 w-3 " + (i < filledStars
               ? 'fill-yellow-500 text-yellow-500'
-              : 'text-stone-400/50 dark:text-gray-500/50')}
+              : 'text-stone-300/60 dark:text-gray-600/60')}
           />
         {/each}
-        <span class="ml-1 text-xs text-stone-500 dark:text-gray-300">
-          {product.reviewScore ?? 0}
-        </span>
-        <span class="text-xs text-stone-400 dark:text-gray-400">
-          ({product.reviewCount ?? 0})
-        </span>
+        <span class="ml-1 text-xs text-stone-500 dark:text-gray-400">{displayRating.toFixed(1)}</span>
       </div>
-  </div>
+    {/if}
 
-  <!-- Bottom: Reviews, Price, Items Sold -->
-  <div class="mt-2 flex flex-col gap-2">
-    <div class="flex items-center justify-between">
-      <!-- Price -->
-      <span class="text-2xl font-bold text-stone-800 dark:text-gray-100">
-        ${product.price}
+    <!-- Price + bids/time row -->
+    <div class="flex items-end justify-between mt-auto">
+      <span class="text-xl font-bold text-stone-800 dark:text-gray-100">
+        ₹{displayPrice.toLocaleString('en-IN')}
       </span>
-      <span class="mt-2 text-right text-xs text-stone-400 dark:text-stone-400">{product.itemsSold ?? 0} sold</span>
+    </div>
+
+    <div class="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mt-1.5">
+      <span>{displayBids} bids</span>
+      {#if timeLeft()}
+        <span class="flex items-center gap-1 {timeLeft()?.urgent ? 'text-rose-600 dark:text-rose-400 font-semibold' : ''}">
+          <Clock class="w-3 h-3" />
+          {timeLeft()?.label}
+        </span>
+      {/if}
     </div>
   </div>
-  <!--Bid count and time left-->
-  <div class="flex items-start justify-between text-xs text-stone-500 dark:text-stone-400">
-    <a href={`/listings/${product.id}`} class="hover:underline">
-      {product.bids ?? 0} bids
-    </a>
-    <p class="text-stone-500 dark:text-gray-400">·</p>
-    {#if product.time_left_hours < 24}
-      <a href={"/listings/${product.id}/deadline"} class="hover:underline font-bold text-stone-600 dark:text-stone-300">{product.time_left_hours ?? 0}h left ({product.bid_deadline ?? 'UNKNOWN'})</a>
-    {:else}
-      <a href={`/listings/${product.id}/deadline`} class="hover:underline text-stone-600 dark:text-stone-300">{product.time_left_days ?? 0}d left ({product.bid_deadline ?? 'UNKNOWN'})</a>
-    {/if}
-  </div>
-</div>
+</a>
