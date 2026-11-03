@@ -21,7 +21,6 @@
 	let activeCategory = $state('recentlylisted');
 	let showAuthModal = $state(false);
 
-	let user = $state<SupabaseUser | null>(null);
 	let showDropdown = $state(false);
 
 	// Refresh server data when the logged-in user changes
@@ -67,7 +66,7 @@
 		if (user) {
 			goto('/sell');
 		} else {
-			goto('/auth/signin?next=/sell');
+			openAuthModal();
 		}
 	}
 
