@@ -1,8 +1,7 @@
 <script lang="ts">
-	import favicon from '$lib/assets/palm-tree.svg';
 	import { Moon, Sun } from 'lucide-svelte';
 	import { supabase } from '$lib/supabaseClient';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 
 	let { children, data } = $props();
 	let isDark = $state(false);
@@ -84,7 +83,7 @@
 					<!-- Theme Toggle Button -->
 					<button
 						onclick={toggleTheme}
-						class="p-2 rounded-full bg-transparent hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300 min-h-[44px] min-w-[44px] flex items-center justify-center"
+						class="p-2 rounded-full bg-transparent hover:bg-stone-400/30 transition-colors text-stone-800 dark:text-gray-300 min-h-11 min-w-11 flex items-center justify-center"
 						aria-label="Toggle dark mode"
 					>
 						{#if isDark}
