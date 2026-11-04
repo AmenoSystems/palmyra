@@ -52,16 +52,14 @@
   let displayBids = $derived(product.bid_count ?? product.bids ?? 0);
 
   // Primary image (4:3)
-  let primaryImage = $derived(() => {
-    if (product.listing_images && product.listing_images.length > 0) {
-      const primary = product.listing_images.find(i => i.is_primary);
-      return primary?.image_url ?? product.listing_images[0].image_url;
-    }
+  let primaryImage = $derived.by(() => {
+    const imgs = product.listing_images;
+    if (imgs?.length) return (imgs.find((i) => i.is_primary) ?? imgs[0]).image_url;
     return product.image ?? null;
   });
 
   // Time left
-  let timeLeft = $derived(() => {
+  let timeLeft = $derived.by(() => {
     if (product.end_date) {
       const ms = new Date(product.end_date).getTime() - Date.now();
       if (ms <= 0) return { label: 'Ended', urgent: true };
@@ -81,29 +79,27 @@
 
   // Condition badge styles
   const CONDITION_STYLES: Record<string, string> = {
-    brand_new:  'bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 text-gray-200',
-    like_new:   'bg-indigo-500 text-gray-200',
-    open_box:   'bg-indigo-400 text-gray-200',
-    used_good:  'bg-yellow-300 text-gray-800',
-    used_fair:  'bg-amber-400 text-gray-800',
-    for_parts:  'bg-red-500 text-gray-200',
-    // Legacy
+    new:      'bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 text-gray-200',
+    like_new: 'bg-indigo-500 text-gray-200',
+    good:     'bg-yellow-300 text-gray-800',
+    fair:     'bg-amber-400 text-gray-800',
+    poor:     'bg-red-500 text-gray-200',
+    // Legacy dummy values
     'BRAND NEW':      'bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 text-gray-200',
     'NEW - OPEN BOX': 'bg-indigo-500 text-gray-200',
-    'USED':           'bg-yellow-300 text-gray-800',
+    'USED':           'bg-yellow-300 text-gray-800'
   };
 
   const CONDITION_LABELS: Record<string, string> = {
-    brand_new:  'BRAND NEW',
-    like_new:   'LIKE NEW',
-    open_box:   'OPEN BOX',
-    used_good:  'USED – GOOD',
-    used_fair:  'USED – FAIR',
-    for_parts:  'FOR PARTS',
+    new: 'BRAND NEW',
+    like_new: 'LIKE NEW',
+    good: 'USED - GOOD',
+    fair: 'USED - FAIR',
+    poor: 'FOR PARTS / POOR'
   };
 
-  let condStyle = $derived(CONDITION_STYLES[product.condition] ?? 'bg-red-500 text-gray-200');
-  let condLabel = $derived(CONDITION_LABELS[product.condition] ?? (product.condition ?? 'UNKNOWN').toUpperCase());
+  let condStyle = $derived(CONDITION_STYLES[product.condition] ?? 'bg-stone-500 text-gray-200');
+  let condLabel = $derived(CONDITION_LABELS[product.condition] ?? product.condition);
 </script>
 
 <a
@@ -113,9 +109,9 @@
 >
   <!-- Product Image — enforced 4:3 aspect ratio -->
   <div class="relative w-full aspect-[4/3] overflow-hidden bg-stone-200 dark:bg-stone-700">
-    {#if primaryImage()}
+    {#if primaryImage}
       <img
-        src={primaryImage()}
+        src={primaryImage}
         alt={displayTitle}
         class="h-full w-full object-cover"
         loading="lazy"
@@ -127,9 +123,15 @@
     {/if}
 
     <!-- Condition badge overlay -->
-    <span class="absolute top-2 left-2 px-2 py-0.5 text-xs font-bold italic rounded {condStyle}">
-      {condLabel}
-    </span>
+    {#if product.condition}
+      <span class="absolute top-2 left-2 px-2 py-0.5 text-xs font-bold italic rounded {condStyle}">
+        {condLabel}
+      </span>
+    {:else}
+      <span class="absolute top-2 left-2 px-2 py-0.5 text-xs font-bold italic rounded bg-red-500 text-gray-200">
+        UNKNOWN
+      </span>
+    {/if}
   </div>
 
   <!-- Product Info -->
@@ -165,10 +167,10 @@
 
     <div class="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mt-1.5">
       <span>{displayBids} bids</span>
-      {#if timeLeft()}
-        <span class="flex items-center gap-1 {timeLeft()?.urgent ? 'text-rose-600 dark:text-rose-400 font-semibold' : ''}">
+      {#if timeLeft}
+        <span class="flex items-center gap-1 {timeLeft?.urgent ? 'text-rose-600 dark:text-rose-400 font-semibold' : ''}">
           <Clock class="w-3 h-3" />
-          {timeLeft()?.label}
+          {timeLeft?.label}
         </span>
       {/if}
     </div>

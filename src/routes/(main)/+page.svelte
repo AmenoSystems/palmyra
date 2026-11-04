@@ -4,8 +4,8 @@
 
   let { data } = $props();
 
-  let featured = $derived((data.featured ?? []) as any[]);
-  let recent = $derived((data.recent ?? []) as any[]);
+  let featured = $derived((data.featured ?? []));
+  let recent = $derived((data.recent ?? []));
 </script>
 
 <!-- Featured Listings -->

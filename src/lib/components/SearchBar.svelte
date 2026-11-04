@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
     import { Command, X } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	
 	let searchQuery = $state('');
+	let sortValue = $state('recent');
 	let isFocused = $state(false);
 	let inputRef: HTMLInputElement | undefined = $state();
 	
@@ -18,10 +21,18 @@
 		return () => document.removeEventListener('keydown', handleKeyDown);
 	});
 	
-	function handleSearch() {
-		if (searchQuery.trim()) {
-			console.log('Searching for:', searchQuery);
-		}
+
+	function applyFilters(p = 1) {
+		const params = new SvelteURLSearchParams();
+		if (searchQuery) params.set('q', searchQuery);
+		if (sortValue !== 'recent') params.set('sort', sortValue);
+		if (p > 1) params.set('page', String(p));
+		goto(`/listings?${params.toString()}`, { replaceState: true });
+	}
+
+	function handleSearch(e: Event) {
+		e.preventDefault();
+		applyFilters(1);
 	}
 	
 	function clearSearch() {
@@ -50,7 +61,7 @@
 			class="w-full py-2.5 px-2 bg-transparent text-stone-800 placeholder:text-stone-500/70 dark:placeholder:text-stone-100/50 focus:outline-none text-sm"
 			onfocus={() => isFocused = true}
 			onblur={() => isFocused = false}
-			onkeydown={(e) => e.key === 'Enter' && handleSearch()}
+			onkeydown={(e) => e.key === 'Enter' && handleSearch(e)}
 		/>
 
 		<!-- Clear Button -->

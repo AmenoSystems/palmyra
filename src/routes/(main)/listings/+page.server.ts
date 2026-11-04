@@ -3,7 +3,7 @@ import type { PageServerLoad } from './$types';
 const LISTING_QUERY = `
   id, slug, title, condition, starting_price, current_price, buy_it_now_price, end_date, created_at,
   listing_images(image_url, is_primary, display_order),
-  profiles(username, rating),
+  profiles:profiles!listings_seller_id_fkey(username, rating),
   subcategories(name, slug, category_id)
 `.trim();
 
