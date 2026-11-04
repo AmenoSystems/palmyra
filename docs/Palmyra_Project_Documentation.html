@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PALMYRA — Project Documentation</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+    @bottom-center {
+      content: counter(page);
+      font-size: 9pt;
+      color: #64748b;
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.55;
+    font-size: 10pt;
+    margin: 0;
+    padding: 0;
+  }
+  .cover {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    text-align: center;
+    padding-top: 40px;
+  }
+  .cover-pre {
+    color: #4f46e5;
+    font-weight: 700;
+    font-size: 11pt;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .cover-title {
+    font-size: 28pt;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 10px 0;
+    letter-spacing: -0.5px;
+  }
+  .cover-sub {
+    font-size: 13pt;
+    color: #475569;
+    max-width: 600px;
+    margin: 0 0 40px 0;
+  }
+  .cover-meta {
+    width: 100%;
+    max-width: 550px;
+    border-collapse: collapse;
+    margin-top: 30px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .cover-meta td {
+    padding: 10px 14px;
+    font-size: 9.5pt;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .cover-meta td.label {
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #334155;
+    width: 38%;
+  }
+  .cover-meta td.val {
+    background: #f8fafc;
+    color: #1e293b;
+  }
+  h1 {
+    font-size: 17pt;
+    color: #4f46e5;
+    border-bottom: 2px solid #e0e7ff;
+    padding-bottom: 6px;
+    margin-top: 32px;
+    margin-bottom: 14px;
+    page-break-after: avoid;
+  }
+  h2 {
+    font-size: 12.5pt;
+    color: #0f172a;
+    margin-top: 22px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+  }
+  p {
+    margin: 0 0 10px 0;
+    text-align: justify;
+  }
+  ul {
+    margin: 0 0 14px 20px;
+    padding: 0;
+  }
+  li {
+    margin-bottom: 6px;
+  }
+  li strong {
+    color: #0f172a;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0 18px 0;
+    font-size: 8.5pt;
+    page-break-inside: avoid;
+  }
+  table.data-table th {
+    background: #1e293b;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 8px 10px;
+    text-align: left;
+    border: 1px solid #1e293b;
+  }
+  table.data-table td {
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+  }
+  table.data-table tr:nth-child(even) td {
+    background: #f8fafc;
+  }
+  .diagram-box {
+    background: #0f172a;
+    color: #38bdf8;
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 8pt;
+    line-height: 1.35;
+    overflow-x: auto;
+    margin: 14px 0 20px 0;
+    page-break-inside: avoid;
+  }
+  .code-block {
+    background: #f1f5f9;
+    border-left: 4px solid #4f46e5;
+    padding: 10px 14px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 8.5pt;
+    margin: 10px 0 14px 0;
+    color: #1e293b;
+    border-radius: 0 6px 6px 0;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 7.5pt;
+    font-weight: 700;
+    border-radius: 9999px;
+    background: #e0e7ff;
+    color: #4338ca;
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-pre">Software Engineering Project Specification</div>
+  <div class="cover-title">PALMYRA</div>
+  <div class="cover-sub">Modern Full-Stack Online Auction & Marketplace Platform</div>
+  
+  <table class="cover-meta">
+    <tr>
+      <td class="label">Project Title</td>
+      <td class="val">PALMYRA — Online Auction & Marketplace</td>
+    </tr>
+    <tr>
+      <td class="label">System Architecture</td>
+      <td class="val">SvelteKit 2 + Svelte 5 + Supabase BaaS (PostgreSQL, Auth, Storage)</td>
+    </tr>
+    <tr>
+      <td class="label">Primary Innovation</td>
+      <td class="val">Canonical 4:3 Aspect Ratio Pipeline with In-Browser Canvas Cropper</td>
+    </tr>
+    <tr>
+      <td class="label">Branch & Environment</td>
+      <td class="val"><code>sellerproduction</code> | Production Ready</td>
+    </tr>
+    <tr>
+      <td class="label">Release Date</td>
+      <td class="val">November 2026</td>
+    </tr>
+  </table>
+</div>
+
+<!-- SECTION 1 -->
+<h1>1. Project Title</h1>
+<p><strong>PALMYRA</strong> — An Ultra-Responsive, Cloud-Native Online Auction and Multi-Vendor Marketplace Platform built with SvelteKit 2, Svelte 5 Runes, Tailwind CSS v4, and Supabase Backend-as-a-Service.</p>
+
+<!-- SECTION 2 -->
+<h1>2. Introduction</h1>
+<p>Modern e-commerce requires dynamic, fair pricing mechanisms alongside rapid visual engagement. Conventional classifieds and fixed-price marketplaces lack dynamic price discovery, whereas legacy auction systems suffer from clunky user interfaces, full-page reloads, distorted images, and poor mobile accessibility.</p>
+<p><strong>PALMYRA</strong> resolves these deficiencies through a modern, cloud-native architecture combining SvelteKit 2 (with Svelte 5's new reactivity runes) on the frontend and Supabase (PostgreSQL 15, Auth with SSR cookies, and Storage CDN) on the backend.</p>
+<p>A flagship engineering highlight of PALMYRA is its <strong>Zero-Distortion Media Pipeline</strong>: by enforcing a canonical <strong>4:3 aspect ratio</strong> across every touchpoint (thumbnails, gallery cards, and hero viewports) via an interactive client-side canvas cropper and WebP compressor, the platform guarantees zero cumulative layout shifts (CLS) and snappy mobile performance.</p>
+
+<!-- SECTION 3 -->
+<h1>3. Objectives</h1>
+<ul>
+  <li><strong>Real-Time Dynamic Marketplace:</strong> Implement competitive live auctions featuring starting bids, Buy-It-Now instant checkouts, reserve thresholds, and dynamic countdown timers.</li>
+  <li><strong>Streamlined "Start Selling" Flow:</strong> Facilitate rapid listing creation with return-URL preservation across authentication boundaries, cascading categories, and tag indexing.</li>
+  <li><strong>Standardized 4:3 Media Uniformity:</strong> Eradicate image stretching, letterboxing, and layout jumping by constraining all uploads to 4:3 via an interactive canvas cropper.</li>
+  <li><strong>Mobile-First Ergonomics:</strong> Guarantee touch targets &ge; 44px, sticky bid bars on mobile viewports, zero horizontal overflow, and responsiveness down to 360px widths.</li>
+  <li><strong>Zero-Trust Security & Row Level Security:</strong> Implement PostgreSQL RLS policies that isolate user data, restrict mutations to owners, and enforce cookie session validation.</li>
+</ul>
+
+<!-- SECTION 4 -->
+<h1>4. Modules Overview</h1>
+<ul>
+  <li><strong>Authentication & Routing Guard Module:</strong> Manages session cookies, OAuth code exchanges, protected route barriers, and return-URL navigation.</li>
+  <li><strong>Seller & Listing Creation Module:</strong> Powers a multi-step listing wizard with cascading category taxonomy, condition grading, price rules, and slug generation.</li>
+  <li><strong>Media Pipeline & Storage Module:</strong> Direct camera capture, multi-image upload queue, interactive 4:3 canvas cropper, WebP compression, reordering, and Supabase Storage CDN distribution.</li>
+  <li><strong>Marketplace Discovery & Live Feeds:</strong> Live PostgreSQL queries for active auctions, multi-parameter search, category filtering, sorting, and pagination.</li>
+  <li><strong>Listing Details & Showcase:</strong> 4:3 gallery view with thumbnail carousel, live countdown, view count incrementor, and verified seller info.</li>
+  <li><strong>Auction Bidding & Watchlist:</strong> Bid placement validation, Buy-It-Now execution, and user watchlisting.</li>
+  <li><strong>User Profile & Reputation:</strong> Seller profiles, review score calculation, avatar management, and ratings.</li>
+</ul>
+
+<!-- SECTION 5 -->
+<h1>5. Technologies Used</h1>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th style="width: 25%;">Layer</th>
+      <th style="width: 30%;">Technology</th>
+      <th style="width: 45%;">Role & Significance</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Frontend Framework</strong></td>
+      <td>SvelteKit 2 + Svelte 5</td>
+      <td>Runes reactivity (<code>$state</code>, <code>$derived</code>, <code>$effect</code>). Hybrid SSR/CSR ensures instant first-contentful paint with minimal client JavaScript.</td>
+    </tr>
+    <tr>
+      <td><strong>Type System</strong></td>
+      <td>TypeScript 6.0</td>
+      <td>Full-stack end-to-end type safety for database models, API responses, form actions, and component props.</td>
+    </tr>
+    <tr>
+      <td><strong>Styling & Icons</strong></td>
+      <td>Tailwind CSS v4 + Lucide</td>
+      <td>Next-generation CSS engine with frosted glass aesthetic, dark/light theme switching, and accessible SVG iconography.</td>
+    </tr>
+    <tr>
+      <td><strong>Database & Engine</strong></td>
+      <td>PostgreSQL 15 (Supabase)</td>
+      <td>Relational integrity, foreign key cascades, check constraints, UUID primary keys, and PL/pgSQL triggers.</td>
+    </tr>
+    <tr>
+      <td><strong>Security & Auth</strong></td>
+      <td>Supabase Auth + SSR Cookies</td>
+      <td>Server-side session validation via HTTP-only cookies, OAuth (Google), and Row-Level Security (RLS) enforcement.</td>
+    </tr>
+    <tr>
+      <td><strong>Cloud Storage</strong></td>
+      <td>Supabase Storage (CDN)</td>
+      <td>Public bucket <code>listing-images</code> with authenticated uploads and public CDN delivery.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- SECTION 6 -->
+<h1>6. Data Flow Diagrams (DFD)</h1>
+<h2>6.1 DFD Level 0 — Context Diagram</h2>
+<div class="diagram-box">
++-----------------------------------------------------------------------------------------+
+|                                    DFD LEVEL 0: CONTEXT DIAGRAM                         |
++-----------------------------------------------------------------------------------------+
+
+          [ SELLER ]                                                   [ BUYER ]
+              |                                                            |
+              | 1. Credentials / Profile                                   | 1. Search & Filter Listings
+              | 2. Item Details + Cropped 4:3 Images                      | 2. Place Bid / Buy-Now
+              | 3. Manage Inventory & Schedule                            | 3. Add to Watchlist / Review
+              v                                                            v
+       +--------------------------------------------------------------------------+
+       |                                                                          |
+       |                   PALMYRA ONLINE AUCTION PLATFORM                        |
+       |                                                                          |
+       +--------------------------------------------------------------------------+
+              ^                                                            ^
+              | OAuth Redirect & Token                                     | Public 4:3 WebP URLs
+              v                                                            v
+      [ GOOGLE OAUTH ]                                           [ SUPABASE STORAGE ]
+      (Identity Provider)                                        (listing-images bucket)
+</div>
+
+<h2>6.2 DFD Level 1 — Subsystem Decomposition</h2>
+<div class="diagram-box">
++-----------------------------------------------------------------------------------------+
+|                                   DFD LEVEL 1: SUBSYSTEM DIAGRAM                        |
++-----------------------------------------------------------------------------------------+
+
+  [User] ---> (1.0 Auth & Session) <---> [auth.users] / [profiles]
+                    |
+                    v (Authenticated Context)
+  [Seller] -> (2.0 Listing Publication) ----> [listings] & [listing_tags]
+                    |
+                    +-> (3.0 Media Cropper & Upload) -> [Supabase Storage]
+                                                              |
+                                                              v (image_url)
+                                                    [listing_images]
+                    
+  [Buyer] --> (4.0 Browse & Search) <------ [listings] + [listing_images]
+                    |
+                    +-> (5.0 Bidding Engine) -------> [bids] & [bid_history]
+                    |
+                    +-> (6.0 Watchlist Manager) ----> [watchlist]
+</div>
+
+<h2>6.3 DFD Level 2 — Seller Listing Creation & Media Flow</h2>
+<ul>
+  <li><strong>2.1 Camera / File Picker:</strong> User triggers file selector or native mobile camera (<code>capture="environment"</code>).</li>
+  <li><strong>2.2 Interactive 4:3 Canvas Cropper:</strong> Image loaded into HTML5 Canvas; user zooms (1x-5x) and pans.</li>
+  <li><strong>2.3 Offscreen WebP Export:</strong> Canvas outputs 800x600 WebP blob at 0.85 compression quality.</li>
+  <li><strong>2.4 Concurrent Storage Streaming:</strong> Blobs streamed in parallel to <code>listing-images/{uid}/{listing_id}/{uuid}.webp</code>.</li>
+  <li><strong>2.5 Server Transaction:</strong> POST action writes atomically to <code>listings</code>, <code>listing_images</code>, and <code>listing_tags</code>.</li>
+</ul>
+
+<!-- SECTION 7 -->
+<h1>7. Entity-Relationship (ER) Diagram</h1>
+<div class="diagram-box">
++-----------------------------------------------------------------------------------------+
+|                                  ENTITY-RELATIONSHIP DIAGRAM                            |
++-----------------------------------------------------------------------------------------+
+
+  [auth.users] 1 -------- 1 [profiles]
+                                | 1
+                                |
+                                | has many
+                                v *
+  [categories] 1 --- * [subcategories] 1 --- * [listings] 1 --- * [listing_images]
+                                                    |  |
+                                                    |  +------- * [listing_tags]
+                                                    |
+                                                    +---------- * [watchlist] * --- 1 [profiles]
+                                                    |
+                                                    +---------- * [bids] 1 --- * [bid_history]
+                                                    |              |
+                                                    |              v
+                                                    |        [profiles] (bidder)
+                                                    |
+                                                    +---------- * [reviews] * --- 1 [profiles]
+</div>
+
+<h2>7.1 Cardinality & Integrity Rules</h2>
+<ul>
+  <li><code>profiles</code> (1) &rarr; <code>listings</code> (*): One seller creates multiple listings; deletion cascades.</li>
+  <li><code>categories</code> (1) &rarr; <code>subcategories</code> (*): Taxonomy hierarchy; cascading foreign key.</li>
+  <li><code>listings</code> (1) &rarr; <code>listing_images</code> (*): 1-to-many relationship with order index and primary flag.</li>
+  <li><code>listings</code> (1) &rarr; <code>listing_tags</code> (*): 1-to-many tag index for search filtering.</li>
+  <li><code>listings</code> (1) &rarr; <code>bids</code> (*): Auction bids placed by buyers; records audit trail in <code>bid_history</code>.</li>
+</ul>
+
+<!-- SECTION 8 -->
+<h1>8. Database Design & Schema Specification</h1>
+
+<h2>Table: listings</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Column</th><th>Type</th><th>Constraints</th><th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>id</code></td><td>uuid</td><td>PRIMARY KEY, gen_random_uuid()</td><td>Unique listing identifier</td></tr>
+    <tr><td><code>seller_id</code></td><td>uuid</td><td>FK &rarr; profiles(id) ON DELETE CASCADE</td><td>Seller account ID</td></tr>
+    <tr><td><code>subcategory_id</code></td><td>uuid</td><td>FK &rarr; subcategories(id)</td><td>Category taxonomy linkage</td></tr>
+    <tr><td><code>title</code></td><td>text</td><td>NOT NULL</td><td>Listing headline (max 120 chars)</td></tr>
+    <tr><td><code>slug</code></td><td>text</td><td>NOT NULL, UNIQUE</td><td>URL slug with unique random suffix</td></tr>
+    <tr><td><code>description</code></td><td>text</td><td>NOT NULL</td><td>Markdown/text item details</td></tr>
+    <tr><td><code>condition</code></td><td>text</td><td>NOT NULL</td><td>Enum: brand_new, like_new, open_box, etc.</td></tr>
+    <tr><td><code>starting_price</code></td><td>numeric</td><td>NOT NULL, CHECK (&gt; 0)</td><td>Opening bid in INR (&ge; 1)</td></tr>
+    <tr><td><code>current_price</code></td><td>numeric</td><td>NOT NULL</td><td>Current highest bid or opening price</td></tr>
+    <tr><td><code>buy_it_now_price</code></td><td>numeric</td><td>NULLABLE</td><td>Instant buyout price</td></tr>
+    <tr><td><code>reserve_price</code></td><td>numeric</td><td>NULLABLE</td><td>Minimum hidden reserve</td></tr>
+    <tr><td><code>quantity</code></td><td>int4</td><td>DEFAULT 1, CHECK (&ge; 1)</td><td>Inventory lot count</td></tr>
+    <tr><td><code>status</code></td><td>text</td><td>DEFAULT 'active'</td><td>Enum: active, ended, sold, cancelled</td></tr>
+    <tr><td><code>start_date</code></td><td>timestamptz</td><td>NOT NULL</td><td>Auction start time</td></tr>
+    <tr><td><code>end_date</code></td><td>timestamptz</td><td>NOT NULL</td><td>Auction closing deadline</td></tr>
+    <tr><td><code>views</code></td><td>int4</td><td>DEFAULT 0</td><td>Accumulated page views</td></tr>
+    <tr><td><code>created_at</code></td><td>timestamptz</td><td>DEFAULT now()</td><td>Creation timestamp</td></tr>
+  </tbody>
+</table>
+
+<h2>Table: listing_images</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Column</th><th>Type</th><th>Constraints</th><th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>id</code></td><td>uuid</td><td>PRIMARY KEY</td><td>Unique image record ID</td></tr>
+    <tr><td><code>listing_id</code></td><td>uuid</td><td>FK &rarr; listings(id) ON DELETE CASCADE</td><td>Associated listing</td></tr>
+    <tr><td><code>image_url</code></td><td>text</td><td>NOT NULL</td><td>Public CDN URL (4:3 WebP)</td></tr>
+    <tr><td><code>is_primary</code></td><td>bool</td><td>DEFAULT false</td><td>Flag for primary card/hero showcase</td></tr>
+    <tr><td><code>display_order</code></td><td>int4</td><td>DEFAULT 0</td><td>Ordering sequence index</td></tr>
+    <tr><td><code>created_at</code></td><td>timestamptz</td><td>DEFAULT now()</td><td>Upload timestamp</td></tr>
+  </tbody>
+</table>
+
+<h2>Table: profiles</h2>
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Column</th><th>Type</th><th>Constraints</th><th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td><code>id</code></td><td>uuid</td><td>PRIMARY KEY &rarr; auth.users(id)</td><td>Auth user account ID</td></tr>
+    <tr><td><code>username</code></td><td>text</td><td>NOT NULL, UNIQUE</td><td>Display handle</td></tr>
+    <tr><td><code>full_name</code></td><td>text</td><td>NULLABLE</td><td>Full user name</td></tr>
+    <tr><td><code>avatar_id</code></td><td>text</td><td>NULLABLE</td><td>Avatar path in storage bucket</td></tr>
+    <tr><td><code>bio</code></td><td>text</td><td>NULLABLE</td><td>Biography summary</td></tr>
+    <tr><td><code>rating</code></td><td>numeric</td><td>DEFAULT 0.0</td><td>Aggregated rating score (0.0 - 5.0)</td></tr>
+    <tr><td><code>total_reviews</code></td><td>int4</td><td>DEFAULT 0</td><td>Total review counter</td></tr>
+  </tbody>
+</table>
+
+<!-- SECTION 9 -->
+<h1>9. Functionalities of Each Module</h1>
+<h2>9.1 Authentication & Navigation Guards</h2>
+<p>Session tokens are managed using HTTP-only cookies verified on every request by <code>src/hooks.server.ts</code>. If an unauthenticated user clicks "Start Selling", the system routes them to <code>/auth/signin?next=/sell</code>, preserving their intended destination across both password-based and OAuth Google sign-ins.</p>
+
+<h2>9.2 Seller & Listing Creation Wizard</h2>
+<p>Located at <code>/sell</code>, this multi-step form guides sellers through:</p>
+<ul>
+  <li><strong>Step 1 (Photos):</strong> Multi-upload with native camera option, canvas cropping, and upload progress indicators.</li>
+  <li><strong>Step 2 (Details):</strong> Item title, description, cascading category &rarr; subcategory selector, condition selection buttons, and tags.</li>
+  <li><strong>Step 3 (Pricing & Dates):</strong> Starting price, optional Buy-It-Now price, optional reserve price, inventory quantity, and start/end datetime selectors.</li>
+</ul>
+
+<h2>9.3 4:3 Image Cropping & Compression Pipeline</h2>
+<p>Every photo uploaded must conform to the <strong>4:3 aspect ratio</strong>. The <code>ImageCropper</code> provides an interactive viewport with zoom and pan controls. Upon confirmation, the offscreen canvas compresses the image into an 800&times;600 WebP blob at 85% quality. Files are streamed in parallel to Supabase Storage, and public URLs are assigned.</p>
+
+<h2>9.4 Marketplace Discovery & Browse</h2>
+<p>The homepage (<code>/</code>) and browse page (<code>/listings</code>) execute live PostgreSQL queries against Supabase:</p>
+<div class="code-block">
+SELECT * FROM listings 
+WHERE status = 'active' 
+  AND start_date &lt;= now() 
+  AND end_date &gt;= now()
+ORDER BY current_price DESC;
+</div>
+
+<!-- SECTION 10 -->
+<h1>10. Future Scope</h1>
+<ul>
+  <li><strong>Supabase Realtime WebSocket Bids:</strong> Live bid stream updates pushed to all active viewing clients without page refreshes.</li>
+  <li><strong>Escrow Payment Gateway:</strong> Automated payment hold and release upon confirmed delivery via Stripe Connect.</li>
+  <li><strong>AI-Assisted Item Grading:</strong> Computer vision model to evaluate listing photos against declared conditions and flag counterfeit items.</li>
+  <li><strong>Automated Settlement Cron (pg_cron):</strong> Automatic state transitions from 'active' to 'sold'/'ended' upon expiration, triggering automated winner notifications.</li>
+</ul>
+
+<!-- SECTION 11 -->
+<h1>11. Execution of the Project</h1>
+<h2>11.1 Prerequisites</h2>
+<ul>
+  <li>Node.js v20.x or higher</li>
+  <li>pnpm v9 or v10</li>
+  <li>Supabase project instance with PostgreSQL database and Storage enabled</li>
+</ul>
+
+<h2>11.2 Environment Configuration</h2>
+<div class="code-block">
+# .env.local
+PUBLIC_SUPABASE_URL=https://&lt;your-project-id&gt;.supabase.co
+PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_&lt;your-publishable-key&gt;
+</div>
+
+<h2>11.3 Database Setup</h2>
+<p>Execute the full migration script located at <code>docs/supabase-setup.sql</code> in the Supabase SQL Editor. Ensure the <code>listing-images</code> bucket is set to Public with authenticated upload RLS policies.</p>
+
+<h2>11.4 Running Locally</h2>
+<div class="code-block">
+# Install all dependencies
+pnpm install
+
+# Run development server
+pnpm dev
+# Available at http://localhost:5173
+</div>
+
+<h2>11.5 Building for Production</h2>
+<div class="code-block">
+# Run TypeScript and Svelte diagnostics check
+pnpm check
+
+# Create production build
+pnpm build
+
+# Preview build locally
+pnpm preview
+</div>
+
+</body>
+</html>

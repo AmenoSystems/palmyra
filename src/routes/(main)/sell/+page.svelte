@@ -20,6 +20,12 @@
 	let filteredSubcategories = $derived(
 		data.subcategories.filter((s: any) => s.category_id === selectedCategoryId)
 	);
+	let selectedCatName = $derived(
+		data.categories.find((c: any) => c.id === selectedCategoryId)?.name ?? '—'
+	);
+	let selectedSubName = $derived(
+		data.subcategories.find((s: any) => s.id === selectedSubcategoryId)?.name ?? '—'
+	);
 
 	$effect(() => {
 		// Reset subcategory when category changes
@@ -416,6 +422,7 @@
 				<!-- Preview summary -->
 				<div class="p-3 rounded-xl bg-white/30 dark:bg-stone-700/20 border border-white/20 dark:border-stone-600/20 text-xs text-stone-600 dark:text-stone-400 space-y-1">
 					<p><strong class="text-stone-700 dark:text-stone-300">Title:</strong> {title || '—'}</p>
+					<p><strong class="text-stone-700 dark:text-stone-300">Category:</strong> {selectedCatName} &rarr; {selectedSubName}</p>
 					<p><strong class="text-stone-700 dark:text-stone-300">Condition:</strong> {CONDITIONS.find(c => c.value === condition)?.label ?? '—'}</p>
 					<p><strong class="text-stone-700 dark:text-stone-300">Starting price:</strong> ₹{startingPrice || '—'}</p>
 					<p><strong class="text-stone-700 dark:text-stone-300">Photos:</strong> {uploadedImages.length} uploaded</p>
