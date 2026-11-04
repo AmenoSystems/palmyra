@@ -2,7 +2,6 @@
 	import { Mail, Lock, Eye, EyeOff, Leaf, User as UserIcon, ArrowLeft } from 'lucide-svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
 
 	let { data } = $props();
 	let next = $derived(data.next ?? '/');
@@ -109,18 +108,7 @@
 </svelte:head>
 
 <!-- Full-page auth screen — mobile-first -->
-<div class="min-h-screen flex flex-col items-center justify-center px-4 py-12">
-	<!-- Back link -->
-	<div class="w-full max-w-md mb-4">
-		<a
-			href="/"
-			class="inline-flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
-		>
-			<ArrowLeft class="w-4 h-4" />
-			Back to home
-		</a>
-	</div>
-
+<div class="min-h-full flex flex-col items-center justify-center px-4 py-12">
 	<div class="w-full max-w-md bg-white/80 dark:bg-stone-800/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 dark:border-stone-700/40 p-6 sm:p-8">
 		<!-- Logo -->
 		<div class="flex flex-col items-center mb-6">
@@ -137,7 +125,7 @@
 		<!-- Tab switcher -->
 		<div class="flex bg-stone-200/50 dark:bg-stone-700/40 rounded-full p-1 mb-6">
 			<button
-				class="flex-1 py-2.5 px-4 rounded-full text-sm font-medium transition-all duration-200 min-h-[44px]"
+				class="flex-1 py-2.5 px-4 rounded-full text-sm font-medium transition-all duration-200 min-h-11"
 				class:bg-indigo-600={activeTab === 'signin'}
 				class:text-white={activeTab === 'signin'}
 				class:shadow-sm={activeTab === 'signin'}
@@ -146,7 +134,7 @@
 				onclick={() => toggleTab('signin')}
 			>Sign In</button>
 			<button
-				class="flex-1 py-2.5 px-4 rounded-full text-sm font-medium transition-all duration-200 min-h-[44px]"
+				class="flex-1 py-2.5 px-4 rounded-full text-sm font-medium transition-all duration-200 min-h-11"
 				class:bg-indigo-600={activeTab === 'signup'}
 				class:text-white={activeTab === 'signup'}
 				class:shadow-sm={activeTab === 'signup'}
@@ -244,7 +232,7 @@
 				<div class="flex items-center justify-end">
 					<button
 						type="button"
-						class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline min-h-[44px] px-2"
+						class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline min-h-11 px-2"
 						onclick={handleForgotPassword}
 					>Forgot password?</button>
 				</div>
@@ -253,7 +241,7 @@
 			<button
 				type="submit"
 				disabled={isLoading}
-				class="w-full py-3 rounded-xl bg-linear-to-r from-indigo-500 via-amber-400 to-rose-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed min-h-[48px]"
+				class="w-full py-3 rounded-xl bg-linear-to-r from-indigo-500 via-amber-400 to-rose-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed min-h-12"
 			>
 				{#if isLoading}
 					<span class="flex items-center justify-center gap-2">
@@ -290,7 +278,7 @@
 		<!-- Google -->
 		<button
 			type="button"
-			class="w-full py-3 rounded-xl bg-stone-100/70 dark:bg-stone-700/40 border border-stone-300/50 dark:border-stone-600/50 text-stone-700 dark:text-stone-300 font-medium text-sm flex items-center justify-center gap-2 hover:bg-stone-200/70 dark:hover:bg-stone-600/40 transition-all duration-200 min-h-[48px]"
+			class="w-full py-3 rounded-xl bg-stone-100/70 dark:bg-stone-700/40 border border-stone-300/50 dark:border-stone-600/50 text-stone-700 dark:text-stone-300 font-medium text-sm flex items-center justify-center gap-2 hover:bg-stone-200/70 dark:hover:bg-stone-600/40 transition-all duration-200 min-h-12"
 			onclick={handleGoogleSignIn}
 			disabled={isLoading}
 		>
@@ -303,5 +291,16 @@
 			</svg>
 			Continue with Google
 		</button>
+	</div>
+
+	<!-- Back link -->
+	<div class="w-full max-w-md mt-6 align-baseline text-center">
+		<a
+			href="/"
+			class="inline-flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
+		>
+			<ArrowLeft class="w-4 h-4" />
+			Back to home
+		</a>
 	</div>
 </div>
