@@ -112,6 +112,17 @@
 		return true;
 	}
 
+	function isListingSold(listingId: string): boolean {
+		const parent = (data.listings ?? []).find((l: any) => l.id === listingId);
+		if (parent?.status === 'sold') return true;
+		const hasAcceptedOrder = purchaseRequests.some(
+			(r) => r.listing_id === listingId && r.status === 'Accepted'
+		);
+		if (hasAcceptedOrder) return true;
+		const winningBid = incomingBids.find((b) => b.listing_id === listingId && b.status === 'won');
+		return !!winningBid;
+	}
+
 	let filteredListings = $derived.by(() => {
 		if (listingFilter === 'all') return data.listings;
 		if (listingFilter === 'active') return data.listings.filter((l: any) => isItemActive(l));
@@ -485,7 +496,7 @@
 							</span>
 
 							<!-- Seller Option: Close Auction & Sell to Top Bidder -->
-							{#if isItemActive(item) && incomingBids.some((b) => b.listing_id === item.id)}
+							{#if isItemActive(item) && !isListingSold(item.id) && incomingBids.some((b) => b.listing_id === item.id)}
 								<form
 									method="POST"
 									action="?/closeAndSell"
@@ -493,6 +504,7 @@
 										return async ({ result, update }) => {
 											if (result.type === 'success' && (result.data as any)?.saleDetails) {
 												recordAuctionSale((result.data as any).saleDetails);
+												item.status = 'sold';
 											}
 											await update();
 										};
@@ -603,9 +615,9 @@
 							</div>
 
 							<!-- Seller Action: Close Bidding & Sell to This Highest Bidder -->
-							{#if bid.status === 'won'}
-								<span class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold">
-									Sold to Bidder
+							{#if isListingSold(bid.listing_id) || bid.status === 'won'}
+								<span class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5">
+									<Check class="w-3.5 h-3.5 text-emerald-600" /> Sold to Bidder
 								</span>
 							{:else}
 								<form
@@ -615,6 +627,11 @@
 										return async ({ result, update }) => {
 											if (result.type === 'success' && (result.data as any)?.saleDetails) {
 												recordAuctionSale((result.data as any).saleDetails);
+												incomingBids = incomingBids.map((b) =>
+													b.listing_id === bid.listing_id
+														? { ...b, status: b.bidder_id === bid.bidder_id ? 'won' : 'closed' }
+														: b
+												);
 											}
 											await update();
 										};

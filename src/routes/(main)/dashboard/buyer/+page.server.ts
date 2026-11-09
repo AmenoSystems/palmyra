@@ -58,7 +58,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// Merge serverStore orders for buyer
 	const serverOrders = getServerOrdersForBuyer(user.id);
 	for (const so of serverOrders) {
-		if (!purchases.some((p) => p.id === so.id)) {
+		if (!purchases.some((p) => p.id === so.id || p.listing_id === so.listing_id)) {
 			purchases.push({
 				id: so.id,
 				listing_id: so.listing_id,
@@ -72,6 +72,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 			});
 		}
 	}
+
+	// Deduplicate purchases so each listing appears at most once in purchases
+	const seenPurchasedListings = new Set<string>();
+	const deduplicatedPurchases: any[] = [];
+	for (const p of purchases) {
+		if (!seenPurchasedListings.has(p.listing_id)) {
+			seenPurchasedListings.add(p.listing_id);
+			deduplicatedPurchases.push(p);
+		}
+	}
+	purchases = deduplicatedPurchases;
 
 	// 2. Fetch user's bids
 	try {

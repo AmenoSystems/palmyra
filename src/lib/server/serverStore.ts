@@ -134,12 +134,15 @@ export function getServerBidsForBidder(bidderId: string): ServerBid[] {
 // ── ORDERS ──────────────────────────────────────────────────────
 
 export function recordServerOrder(order: ServerOrder): ServerOrder {
-	const exists = inMemoryStore.orders.some((o) => o.id === order.id);
-	if (!exists) {
+	const existing = inMemoryStore.orders.find(
+		(o) => o.id === order.id || (o.listing_id === order.listing_id && o.status === 'Accepted')
+	);
+	if (!existing) {
 		inMemoryStore.orders.unshift(order);
 		persistStore();
+		return order;
 	}
-	return order;
+	return existing;
 }
 
 export function updateServerOrderStatus(
@@ -195,4 +198,34 @@ export function setListingOverride(listingId: string, override: Partial<ListingO
 		updated_at: new Date().toISOString()
 	};
 	persistStore();
+}
+
+/**
+ * Merges serverStore overrides (latest bids, status, views) onto a listing object
+ */
+export function applyListingOverrides(listing: any): any {
+	if (!listing || !listing.id) return listing;
+	const override = inMemoryStore.listingOverrides[listing.id];
+	const serverBids = getServerBids(listing.id);
+	const topBid = serverBids.length > 0 ? Number(serverBids[0].amount) : 0;
+	const highestPrice = Math.max(
+		topBid,
+		Number(override?.current_price ?? 0),
+		Number(listing.current_price ?? listing.starting_price ?? 0)
+	);
+
+	return {
+		...listing,
+		status: override?.status ?? listing.status,
+		current_price: highestPrice,
+		bid_count: Math.max(listing.bid_count ?? 0, serverBids.length)
+	};
+}
+
+/**
+ * Merges serverStore overrides onto an array of listing objects
+ */
+export function applyListingOverridesToList(listings: any[]): any[] {
+	if (!Array.isArray(listings)) return [];
+	return listings.map(applyListingOverrides);
 }

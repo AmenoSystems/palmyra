@@ -531,7 +531,8 @@ export const actions: Actions = {
 		if (listing.seller_id !== user.id) {
 			return fail(403, { message: 'Only the seller can close this auction.' });
 		}
-		if (listing.status === 'sold') {
+		const override = getListingOverride(listing.id);
+		if (listing.status === 'sold' || override?.status === 'sold') {
 			return fail(400, { message: 'This item is already sold.' });
 		}
 

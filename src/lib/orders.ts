@@ -51,8 +51,12 @@ export function saveLocalOrders(orders: OrderRecord[]) {
 
 export function addLocalOrder(order: OrderRecord) {
 	const current = getLocalOrders();
-	// Check duplicate
-	const exists = current.some((o) => o.id === order.id || (o.listing_id === order.listing_id && o.buyer_id === order.buyer_id && o.status === 'Pending Seller Approval'));
+	// Check duplicate: prevent duplicate order if same ID or same listing already has an Accepted order
+	const exists = current.some(
+		(o) =>
+			o.id === order.id ||
+			(o.listing_id === order.listing_id && (o.status === 'Accepted' || o.status === order.status))
+	);
 	if (!exists) {
 		saveLocalOrders([order, ...current]);
 	}
@@ -127,9 +131,10 @@ export function addLocalBid(bid: LocalBidRecord) {
 }
 
 /**
- * Closes an auction and creates an Accepted order for the winning bidder
+ * Closes an auction and creates an Accepted order for the winning bidder (idempotent, no duplicates)
  */
 export function recordAuctionSale(sale: {
+	order_id?: string;
 	listing_id: string;
 	seller_id: string;
 	buyer_id: string;
@@ -139,7 +144,7 @@ export function recordAuctionSale(sale: {
 	image_url?: string | null;
 	buyer_username?: string;
 }) {
-	// 1. Mark local bid as 'won'
+	// 1. Mark local bids as 'won' / 'closed'
 	const bids = getLocalBids();
 	const updatedBids = bids.map((b) => {
 		if (b.listing_id === sale.listing_id) {
@@ -153,25 +158,30 @@ export function recordAuctionSale(sale: {
 	});
 	saveLocalBids(updatedBids);
 
-	// 2. Add an Accepted order so buyer sees it in Purchases & Tracking
-	addLocalOrder({
-		id: crypto.randomUUID(),
-		listing_id: sale.listing_id,
-		buyer_id: sale.buyer_id,
-		seller_id: sale.seller_id,
-		price: sale.price,
-		quantity: 1,
-		status: 'Accepted',
-		created_at: new Date().toISOString(),
-		listing: {
-			id: sale.listing_id,
-			title: sale.title,
-			slug: sale.slug,
-			listing_images: sale.image_url ? [{ image_url: sale.image_url }] : []
-		},
-		buyer: {
-			username: sale.buyer_username ?? 'Buyer'
-		}
-	});
+	// 2. Add an Accepted order only if not already present
+	const currentOrders = getLocalOrders();
+	const alreadyExists = currentOrders.some(
+		(o) => o.listing_id === sale.listing_id && o.status === 'Accepted'
+	);
+	if (!alreadyExists) {
+		addLocalOrder({
+			id: sale.order_id || `order_${sale.listing_id}`,
+			listing_id: sale.listing_id,
+			buyer_id: sale.buyer_id,
+			seller_id: sale.seller_id,
+			price: sale.price,
+			quantity: 1,
+			status: 'Accepted',
+			created_at: new Date().toISOString(),
+			listing: {
+				id: sale.listing_id,
+				title: sale.title,
+				slug: sale.slug,
+				listing_images: sale.image_url ? [{ image_url: sale.image_url }] : []
+			},
+			buyer: {
+				username: sale.buyer_username ?? 'Buyer'
+			}
+		});
+	}
 }
-

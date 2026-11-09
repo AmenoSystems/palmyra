@@ -34,7 +34,7 @@
 		const serverOrders = data.purchases ?? [];
 		const combinedOrders = [...serverOrders];
 		for (const l of localOrders) {
-			if (!combinedOrders.some((c) => c.id === l.id)) {
+			if (!combinedOrders.some((c) => c.id === l.id || c.listing_id === l.listing_id)) {
 				const img = l.listing?.listing_images?.[0]?.image_url ?? null;
 				combinedOrders.push({
 					id: l.id,
@@ -49,7 +49,18 @@
 				});
 			}
 		}
-		purchases = combinedOrders;
+
+		// Deduplicate orders so each listing appears at most once in purchases
+		combinedOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+		const seenListingIds = new Set<string>();
+		const deduplicatedOrders: any[] = [];
+		for (const o of combinedOrders) {
+			if (!seenListingIds.has(o.listing_id)) {
+				seenListingIds.add(o.listing_id);
+				deduplicatedOrders.push(o);
+			}
+		}
+		purchases = deduplicatedOrders;
 
 		// 2. Sync Bids
 		const localBids = getLocalBids().filter(

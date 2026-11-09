@@ -99,7 +99,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// Merge serverStore orders for this seller
 	const serverOrders = getServerOrdersForSeller(user.id);
 	for (const so of serverOrders) {
-		if (!purchaseRequests.some((pr) => pr.id === so.id)) {
+		if (!purchaseRequests.some((pr) => pr.id === so.id || (pr.listing_id === so.listing_id && pr.status === 'Accepted'))) {
 			purchaseRequests.push({
 				id: so.id,
 				listing_id: so.listing_id,
@@ -115,6 +115,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 			});
 		}
 	}
+
+	// Deduplicate purchase requests
+	const seenReqListings = new Set<string>();
+	const deduplicatedRequests: any[] = [];
+	for (const pr of purchaseRequests) {
+		if (!seenReqListings.has(pr.listing_id)) {
+			seenReqListings.add(pr.listing_id);
+			deduplicatedRequests.push(pr);
+		}
+	}
+	purchaseRequests = deduplicatedRequests;
 
 	// 3. Fetch incoming bids on seller's listings
 	try {
@@ -134,22 +145,26 @@ export const load: PageServerLoad = async ({ locals }) => {
 				.limit(50);
 
 			if (!bErr && bidsData) {
-				incomingBids = bidsData.map((b: any) => ({
-					id: b.id,
-					amount: Number(b.amount),
-					created_at: b.created_at,
-					bidder_id: b.bidder_id,
-					listing_id: b.listing_id,
-					bidder_username: b.profiles?.username ?? 'Bidder',
-					listing_title: b.listings?.title ?? 'Auction Item',
-					listing_slug: b.listings?.slug ?? b.listing_id,
-					end_date: b.listings?.end_date
-				}));
+				incomingBids = bidsData.map((b: any) => {
+					const parent = listings.find((l) => l.id === b.listing_id);
+					return {
+						id: b.id,
+						amount: Number(b.amount),
+						created_at: b.created_at,
+						bidder_id: b.bidder_id,
+						listing_id: b.listing_id,
+						bidder_username: b.profiles?.username ?? 'Bidder',
+						listing_title: b.listings?.title ?? 'Auction Item',
+						listing_slug: b.listings?.slug ?? b.listing_id,
+						end_date: b.listings?.end_date,
+						status: parent?.status === 'sold' ? 'won' : (b.status ?? 'active')
+					};
+				});
 			} else {
 				// Fallback if join with profiles fails
 				const { data: rawBids } = await db
 					.from('bids')
-					.select('id, amount, created_at, bidder_id, listing_id')
+					.select('id, amount, created_at, bidder_id, listing_id, status')
 					.in('listing_id', sellerListingIds)
 					.order('created_at', { ascending: false })
 					.limit(50);
@@ -166,7 +181,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 							bidder_username: 'Bidder',
 							listing_title: parent?.title ?? 'Auction Item',
 							listing_slug: parent?.slug ?? b.listing_id,
-							end_date: parent?.end_date
+							end_date: parent?.end_date,
+							status: parent?.status === 'sold' ? 'won' : (b.status ?? 'active')
 						};
 					});
 				}
@@ -190,7 +206,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 						bidder_username: sb.bidder_username ?? 'Bidder',
 						listing_title: sb.title ?? parent?.title ?? 'Auction Item',
 						listing_slug: sb.slug ?? parent?.slug ?? sb.listing_id,
-						end_date: sb.end_date ?? parent?.end_date
+						end_date: sb.end_date ?? parent?.end_date,
+						status: parent?.status === 'sold' ? 'won' : (sb.status ?? 'active')
 					});
 				}
 			}
@@ -426,12 +443,17 @@ export const actions: Actions = {
 		// Fetch listing to verify ownership
 		const { data: listing } = await db
 			.from('listings')
-			.select('id, seller_id, title, slug, current_price, starting_price, listing_images(image_url)')
+			.select('id, seller_id, title, slug, current_price, starting_price, status, listing_images(image_url)')
 			.eq('id', listingId)
 			.eq('seller_id', user.id)
 			.maybeSingle();
 
 		if (!listing) return fail(404, { message: 'Listing not found or unauthorized' });
+
+		const override = getListingOverride(listingId);
+		if (listing.status === 'sold' || override?.status === 'sold') {
+			return fail(400, { message: 'This auction has already been closed and sold.' });
+		}
 
 		let winnerId = buyerId;
 		let finalPrice = formPrice;
