@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
     import { Command, X } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	
 	let searchQuery = $state('');
+	let sortValue = $state('recent');
 	let isFocused = $state(false);
 	let inputRef: HTMLInputElement | undefined = $state();
 	
 	onMount(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+			if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
 				e.preventDefault();
 				inputRef?.focus();
 			}
@@ -18,10 +21,18 @@
 		return () => document.removeEventListener('keydown', handleKeyDown);
 	});
 	
-	function handleSearch() {
-		if (searchQuery.trim()) {
-			console.log('Searching for:', searchQuery);
-		}
+
+	function applyFilters(p = 1) {
+		const params = new SvelteURLSearchParams();
+		if (searchQuery) params.set('q', searchQuery);
+		if (sortValue !== 'recent') params.set('sort', sortValue);
+		if (p > 1) params.set('page', String(p));
+		goto(`/listings?${params.toString()}`, { replaceState: true });
+	}
+
+	function handleSearch(e: Event) {
+		e.preventDefault();
+		applyFilters(1);
 	}
 	
 	function clearSearch() {
@@ -50,7 +61,7 @@
 			class="w-full py-2.5 px-2 bg-transparent text-stone-800 placeholder:text-stone-500/70 dark:placeholder:text-stone-100/50 focus:outline-none text-sm"
 			onfocus={() => isFocused = true}
 			onblur={() => isFocused = false}
-			onkeydown={(e) => e.key === 'Enter' && handleSearch()}
+			onkeydown={(e) => e.key === 'Enter' && handleSearch(e)}
 		/>
 
 		<!-- Clear Button -->
@@ -66,7 +77,7 @@
 			<div class="pr-4 pl-2 text-xs text-stone-500/80 dark:text-gray-500 hidden sm:flex items-center gap-1">
                 <div class="px-1.5 py-0.5 bg-stone-300/60 dark:bg-gray-300/60 rounded-lg border border-stone-300/20 flex items-center gap-0.5">
                     <Command class="w-3.5 h-3.5" stroke-width={1.5} />
-                    <span class="text-[14px] font-mono font-medium pt-0.5">S</span>
+                    <span class="text-[14px] font-mono font-medium pt-0.5">K</span>
                 </div>
 	        </div>
 		{/if}
@@ -74,7 +85,7 @@
 		<!-- Search Button -->
 		<button
 			onclick={handleSearch}
-			class="mr-1.5 px-4 py-1.5 rounded-full bg-stone-600/20 hover:bg-stone-600/30 dark:bg-stone-100/30 dark:hover:bg-stone-100/40 transition-colors text-stone-800 dark:text-stone-100 text-sm font-medium"
+			class="mr-1.5 px-4 py-1.5 rounded-full bg-stone-600/20 hover:bg-stone-600/30 dark:bg-stone-100/50 dark:hover:bg-stone-100/40 transition-colors text-stone-800 dark:text-stone-800/80 text-sm font-medium"
 			disabled={!searchQuery.trim()}
 		>
 			Search

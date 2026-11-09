@@ -30,7 +30,7 @@
 					px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200
 					${activeCategory === category.id
 						? 'bg-stone-800 text-white dark:bg-gray-100 dark:text-stone-800'
-						: 'bg-stone-200/70 text-stone-700 hover:bg-stone-300/70 dark:bg-stone-700/50 dark:text-gray-300 dark:hover:bg-stone-600/50'
+						: 'bg-stone-200/70 text-stone-700 hover:bg-stone-300/70 dark:bg-stone-500/50 dark:text-gray-300 dark:hover:bg-stone-600/50'
 					}
 				`}
 			>
