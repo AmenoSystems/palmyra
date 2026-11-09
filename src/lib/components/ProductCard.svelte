@@ -74,7 +74,6 @@
 
 	// Listing type
 	let isAuction = $derived(!!product.starting_price || displayBids > 0);
-	let isBuyNow = $derived(!!product.buy_it_now_price);
 
 	// Time left
 	let timeLeft = $derived.by(() => {
@@ -97,36 +96,23 @@
 
 	// Condition badge styles
 	const CONDITION_STYLES: Record<string, string> = {
-		brand_new: 'bg-linear-to-r from-emerald-500 to-teal-600 text-white',
-		new: 'bg-linear-to-r from-emerald-500 to-teal-600 text-white',
-		like_new: 'bg-indigo-500 text-white',
-		open_box: 'bg-sky-500 text-white',
-		used_good: 'bg-amber-500 text-stone-900',
-		good: 'bg-amber-500 text-stone-900',
-		used_fair: 'bg-orange-500 text-white',
-		fair: 'bg-orange-500 text-white',
-		for_parts: 'bg-rose-500 text-white',
-		poor: 'bg-rose-500 text-white',
-		'BRAND NEW': 'bg-linear-to-r from-emerald-500 to-teal-600 text-white',
-		'NEW - OPEN BOX': 'bg-sky-500 text-white',
-		USED: 'bg-amber-500 text-stone-900'
+		new:      'bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 text-gray-200',
+		like_new: 'bg-indigo-500 text-gray-200',
+		good:     'bg-yellow-300 text-gray-800',
+		fair:     'bg-amber-400 text-gray-800',
+		poor:     'bg-red-500 text-gray-200',
 	};
 
 	const CONDITION_LABELS: Record<string, string> = {
-		brand_new: 'BRAND NEW',
 		new: 'BRAND NEW',
 		like_new: 'LIKE NEW',
-		open_box: 'OPEN BOX',
-		used_good: 'USED - GOOD',
 		good: 'USED - GOOD',
-		used_fair: 'USED - FAIR',
 		fair: 'USED - FAIR',
-		for_parts: 'FOR PARTS',
 		poor: 'POOR'
 	};
 
-	let condStyle = $derived(CONDITION_STYLES[product.condition ?? ''] ?? 'bg-stone-500 text-white');
-	let condLabel = $derived(CONDITION_LABELS[product.condition ?? ''] ?? product.condition ?? 'PRE-OWNED');
+	let condStyle = $derived(CONDITION_STYLES[product.condition ?? ''] ?? 'bg-red-500 text-white');
+	let condLabel = $derived(CONDITION_LABELS[product.condition ?? ''] ?? product.condition ?? 'UNKNOWN');
 
 	// Add to cart feedback
 	let addedToCart = $state(false);
@@ -163,7 +149,7 @@
 	aria-label={displayTitle}
 >
 	<!-- Product Image — enforced 4:3 aspect ratio -->
-	<div class="relative w-full aspect-[4/3] overflow-hidden bg-stone-200 dark:bg-stone-700">
+	<div class="relative w-full aspect-4/3 overflow-hidden bg-stone-200 dark:bg-stone-700">
 		{#if primaryImage}
 			<img
 				src={primaryImage}
@@ -178,26 +164,9 @@
 		{/if}
 
 		<!-- Condition badge overlay (Top-Left) -->
-		<span class="absolute top-2.5 left-2.5 px-2.5 py-0.5 text-[10px] font-bold tracking-wider rounded-full shadow-sm {condStyle}">
+		<span class="absolute top-2.5 left-2.5 px-2.5 py-0.5 text-[10px] font-bold tracking-wider rounded-lg shadow-sm {condStyle}">
 			{condLabel}
 		</span>
-
-		<!-- Listing Type Badge (Top-Right) -->
-		<div class="absolute top-2.5 right-2.5 flex items-center gap-1">
-			{#if isBuyNow && isAuction}
-				<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-stone-900/80 text-amber-300 backdrop-blur-sm border border-amber-300/30 shadow-sm">
-					Auction + BIN
-				</span>
-			{:else if isAuction}
-				<span class="flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-bold rounded-full bg-indigo-900/80 text-indigo-200 backdrop-blur-sm border border-indigo-400/30 shadow-sm">
-					<Gavel class="w-2.5 h-2.5" /> Auction
-				</span>
-			{:else if isBuyNow}
-				<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-900/80 text-emerald-200 backdrop-blur-sm border border-emerald-400/30 shadow-sm">
-					Buy Now
-				</span>
-			{/if}
-		</div>
 	</div>
 
 	<!-- Product Info -->
