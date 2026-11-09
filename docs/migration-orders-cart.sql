@@ -1,5 +1,5 @@
 -- ============================================================
--- PALMYRA — Orders & Cart Migration
+-- PALMYRA — Orders, Cart, Bids & Status Migration
 -- Run these statements in the Supabase SQL Editor:
 -- Dashboard -> SQL Editor -> New Query -> Run
 -- ============================================================
@@ -59,6 +59,7 @@ DROP POLICY IF EXISTS "Users can manage their own cart" ON public.cart_items;
 CREATE POLICY "Users can manage their own cart" ON public.cart_items
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
+
 -- ── 3. BIDS & BID HISTORY RLS POLICIES ─────────────────────────
 -- Grants authenticated bidders permission to insert bids and read bid history
 ALTER TABLE public.bids ENABLE ROW LEVEL SECURITY;
@@ -80,6 +81,35 @@ CREATE POLICY "Anyone can read bid history" ON public.bid_history
 DROP POLICY IF EXISTS "Authenticated users can insert bid history" ON public.bid_history;
 CREATE POLICY "Authenticated users can insert bid history" ON public.bid_history
   FOR INSERT WITH CHECK (true);
+
+
+-- ── 3.1 AUTOMATIC CURRENT_PRICE TRIGGER & LISTINGS UPDATE POLICY ─
+-- Trigger that automatically and securely updates listings.current_price
+-- whenever a new bid is inserted by any authenticated user.
+CREATE OR REPLACE FUNCTION public.handle_new_bid()
+RETURNS trigger AS $$
+BEGIN
+  UPDATE public.listings
+  SET current_price = NEW.amount,
+      updated_at = now()
+  WHERE id = NEW.listing_id
+    AND (current_price IS NULL OR NEW.amount > current_price);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_bid_inserted ON public.bids;
+CREATE TRIGGER on_bid_inserted
+  AFTER INSERT ON public.bids
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_bid();
+
+-- Allow authenticated users to update current_price on listings
+DROP POLICY IF EXISTS "Authenticated users can update current_price on listings" ON public.listings;
+CREATE POLICY "Authenticated users can update current_price on listings" ON public.listings
+  FOR UPDATE USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
+
 
 -- ── 4. REALTIME PUBLICATIONS ──────────────────────────────────
 -- Enable realtime for bids and orders (for live bid updates without page refresh)
@@ -110,6 +140,7 @@ EXCEPTION
     NULL;
 END $$;
 
+
 -- ── 5. LISTING STATUS CONSTRAINT ───────────────────────────────
 -- Broaden check constraint to permit inactive, ended, closed, draft, cancelled
 DO $$
@@ -121,4 +152,3 @@ EXCEPTION
   WHEN OTHERS THEN
     NULL;
 END $$;
-

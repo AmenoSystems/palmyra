@@ -21,7 +21,7 @@
 	} from 'lucide-svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { addToCart } from '$lib/cart';
-	import { addLocalOrder, addLocalBid, recordAuctionSale } from '$lib/orders';
+	import { addLocalOrder, addLocalBid, getLocalBids, recordAuctionSale } from '$lib/orders';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data, form } = $props();
@@ -44,10 +44,35 @@
 	let bids = $state<any[]>([]);
 	let bidCount = $state(0);
 
+	function syncBidsState() {
+		const serverPrice = Number(data.listing?.current_price ?? data.listing?.starting_price ?? 0);
+		const localBids = getLocalBids().filter((b) => b.listing_id === listing?.id);
+		const highestLocal = localBids.reduce((max, b) => Math.max(max, Number(b.amount || 0)), 0);
+
+		currentPrice = Math.max(serverPrice, highestLocal, currentPrice);
+
+		const combined = [...(data.bids ?? [])];
+		for (const lb of localBids) {
+			if (!combined.some((b) => b.id === lb.id || Number(b.amount) === Number(lb.amount))) {
+				combined.push({
+					id: lb.id,
+					amount: Number(lb.amount),
+					created_at: lb.created_at,
+					profiles: { username: lb.bidder_username ?? 'You' }
+				});
+			}
+		}
+		combined.sort((a, b) => Number(b.amount) - Number(a.amount));
+		bids = combined;
+		bidCount = Math.max(data.bidCount ?? 0, combined.length);
+	}
+
 	$effect(() => {
-		currentPrice = Number(data.listing?.current_price ?? data.listing?.starting_price ?? 0);
-		bids = (data.bids ?? []) as any[];
-		bidCount = data.bidCount ?? 0;
+		syncBidsState();
+		window.addEventListener('bids-updated', syncBidsState);
+		return () => {
+			window.removeEventListener('bids-updated', syncBidsState);
+		};
 	});
 
 	// Supabase Realtime subscription for live auction bids
@@ -538,7 +563,8 @@
 										}
 										bidAmount = '';
 									}
-									await update();
+									await update({ reset: false });
+									syncBidsState();
 									isBidding = false;
 								};
 							}}
