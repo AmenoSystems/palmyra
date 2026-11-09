@@ -12,7 +12,7 @@
 			data: { subscription }
 		} = supabase.auth.onAuthStateChange((event, session) => {
 			if (event === 'INITIAL_SESSION') return;
-			if ((session?.user?.id ?? null) !== (data.user?.id ?? null)) invalidateAll();
+			if ((session?.user?.id ?? null) !== (data?.user?.id ?? null)) invalidateAll();
 		});
 		return () => subscription.unsubscribe();
 	});

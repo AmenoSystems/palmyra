@@ -29,7 +29,7 @@
 	function select(categoryId: string) {
 		activeCategory = categoryId;
 		mobileOpen = false;
-		goto(`/listings?category=${encodeURIComponent(categoryId)}`);
+		goto(`/listings?category=${categoryId}`);
 	}
 </script>
 
@@ -52,7 +52,7 @@
 	</div>
 </div>
 
-<div 
+<div
 	class={`
 		md:hidden overflow-hidden transition-all duration-300 ease-in-out
 		${mobileOpen ? 'max-h-125 opacity-100 py-2' : 'max-h-0 opacity-0 py-0'}

@@ -31,60 +31,43 @@ export const actions: Actions = {
 	default: async ({ request, locals }) => {
 		console.log('SELL ACTION HIT');
 		const user = await locals.getUser();
-		console.log('user:', user?.id);
-		if (!user) return fail(401, { message: 'Please sign in.' });
+		if (!user) return fail(401, { message: 'Unauthorized. Please sign in.' });
 
-		const f = await request.formData();
-		console.log('FORM FIELDS:', Object.fromEntries(
-			[...f.entries()].map(([k, v]) => [k, k === 'images_json' ? `[${String(v).length} chars]` : v])
-		));
-		
-		const str = (k: string) => String(f.get(k) ?? '').trim();
-		const num = (k: string) => (str(k) === '' ? null : Number(str(k)));
+		const formData = await request.formData();
 
-		const title = str('title');
-		const description = str('description');
-		const condition = str('condition');
-		const subcategoryId = str('subcategory_id');
-		const startingPrice = num('starting_price');
-		const buyNow = num('buy_it_now_price');
-		const reserve = num('reserve_price');
-		const quantity = Number(str('quantity') || 1);
-		const start = new Date(str('start_iso'));
-		const end = new Date(str('end_iso'));
+		const title = (formData.get('title') as string)?.trim();
+		const description = (formData.get('description') as string)?.trim();
+		const subcategoryId = formData.get('subcategory_id') as string;
+		const condition = formData.get('condition') as string;
+		const startingPrice = parseFloat(formData.get('starting_price') as string);
+		const buyItNowPrice = formData.get('buy_it_now_price')
+			? parseFloat(formData.get('buy_it_now_price') as string)
+			: null;
+		const reservePrice = formData.get('reserve_price')
+			? parseFloat(formData.get('reserve_price') as string)
+			: null;
+		const quantity = parseInt(formData.get('quantity') as string) || 1;
+		const startDate = formData.get('start_date') as string;
+		const endDate = formData.get('end_date') as string;
+		const tagsRaw = (formData.get('tags') as string)?.trim();
 
-		if (title.length < 3 || title.length > 120) return fail(400, { message: 'Title must be 3–120 characters.' });
-		if (description.length < 10 || description.length > 2000) return fail(400, { message: 'Description must be 10–2000 characters.' });
-		if (!CONDITIONS.includes(condition)) return fail(400, { message: 'Choose a condition.' });
-		if (!UUID.test(subcategoryId)) return fail(400, { message: 'Choose a category and subcategory.' });
+		// Validation
+		if (!title) return fail(400, { message: 'Item title is required.' });
+		if (!description) return fail(400, { message: 'Item description is required.' });
+		if (!subcategoryId) return fail(400, { message: 'Please select a category and subcategory.' });
+		if (!condition) return fail(400, { message: 'Please select item condition.' });
+		if (isNaN(startingPrice) || startingPrice <= 0) {
+			return fail(400, { message: 'Please provide a valid starting price greater than 0.' });
+		}
+		if (!startDate || !endDate) {
+			return fail(400, { message: 'Start date and end date are required.' });
+		}
 
-		const okPrice = (n: number | null) => n === null || (Number.isFinite(n) && n > 0 && n < 99_999_999);
-		if (startingPrice === null || !okPrice(startingPrice)) return fail(400, { message: 'Enter a valid starting price.' });
-		if (!okPrice(buyNow) || !okPrice(reserve)) return fail(400, { message: 'Invalid Buy It Now or reserve price.' });
-		if (buyNow !== null && buyNow <= startingPrice) return fail(400, { message: 'Buy It Now must exceed the starting price.' });
-		if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) return fail(400, { message: 'Invalid quantity.' });
+		// Generate clean slug
+		const slug = generateSlug(title);
 
-		if (isNaN(start.getTime()) || isNaN(end.getTime())) return fail(400, { message: 'Invalid dates.' });
-		if (end <= start) return fail(400, { message: 'End date must be after the start date.' });
-		if (end <= new Date()) return fail(400, { message: 'End date must be in the future.' });
-
-		let images: { url: string; isPrimary: boolean }[] = [];
-		try { images = JSON.parse(str('images_json')); } catch { /* handled below */ }
-		if (
-			!Array.isArray(images) || images.length < 1 || images.length > 8 ||
-			!images.every((i) => typeof i.url === 'string' && i.url.startsWith(PUBLIC_SUPABASE_URL))
-		) return fail(400, { message: 'Add 1–8 photos.' });
-
-		// Category/subcategory names double as tags; this also validates the subcategory exists
-		const { data: sub } = await locals.supabase
-			.from('subcategories')
-			.select('id, name, slug, categories(name, slug)')
-			.eq('id', subcategoryId)
-			.maybeSingle();
-		if (!sub) return fail(400, { message: 'That subcategory does not exist.' });
-
-		// 1. Draft
-		const { data: listing, error: e1 } = await locals.supabase
+		// Insert listing into Supabase
+		const { data: listing, error: listingError } = await locals.supabase
 			.from('listings')
 			.insert({
 				seller_id: user.id, subcategory_id: subcategoryId, title, slug: slugify(title),
@@ -94,40 +77,88 @@ export const actions: Actions = {
 			})
 			.select('id, slug')
 			.single();
-		if (e1 || !listing) {
-			console.error('listing insert:', e1);
-			return fail(500, { message: 'Could not create the listing.' });
+
+		if (listingError) {
+			console.error('Listing insert error:', listingError.message);
+			return fail(500, { message: `Failed to create listing: ${listingError.message}` });
 		}
 
-		// 2. Images (roll back on failure)
-		const primaryIdx = Math.max(0, images.findIndex((i) => i.isPrimary));
-		const { error: e2 } = await locals.supabase.from('listing_images').insert(
-			images.map((img, idx) => ({
-				listing_id: listing.id, image_url: img.url, is_primary: idx === primaryIdx, display_order: idx
-			}))
-		);
-		if (e2) {
-			console.error('images:', e2);
-			await locals.supabase.from('listings').delete().eq('id', listing.id);
-			return fail(500, { message: 'Could not save the photos.' });
+		// Insert images (URLs were uploaded from client and passed as JSON)
+		const imagesJson = formData.get('images_json') as string;
+		if (imagesJson) {
+			try {
+				const imageRecords = JSON.parse(imagesJson) as {
+					url: string;
+					isPrimary: boolean;
+					displayOrder: number;
+				}[];
+
+				if (imageRecords.length > 0) {
+					const { error: imgError } = await locals.supabase
+						.from('listing_images')
+						.insert(
+							imageRecords.map((img) => ({
+								listing_id: listing.id,
+								image_url: img.url,
+								is_primary: img.isPrimary,
+								display_order: img.displayOrder
+							}))
+						);
+					if (imgError) console.error('Image insert error:', imgError.message);
+				}
+			} catch (e) {
+				console.error('Failed to parse images JSON:', e);
+			}
 		}
 
-		// 3. Tags (non-fatal)
-		const cat = Array.isArray(sub.categories) ? sub.categories[0] : sub.categories;
-		const userTags = str('tags').split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
-		const tags = [...new Set([cat?.name, sub.name, ...userTags].filter(Boolean).map((t) => String(t).toLowerCase()))].slice(0, 15);
-		const { error: e3 } = await locals.supabase.rpc('set_listing_tags', {
-			p_listing_id: listing.id, p_tags: tags
-		});
-		if (e3) console.error('tags:', e3);
+		// Insert tags safely
+		if (tagsRaw) {
+			const tags = tagsRaw
+				.split(',')
+				.map((t) => t.trim().toLowerCase())
+				.filter(Boolean)
+				.slice(0, 10);
 
-		// 4. Publish
-		const { error: e4 } = await locals.supabase.from('listings').update({ status: 'active' }).eq('id', listing.id);
-		if (e4) {
-			console.error('publish:', e4);
-			return fail(500, { message: 'Saved as a draft but could not publish.' });
+			for (const tagName of tags) {
+				try {
+					let { data: existingTag } = await locals.supabase
+						.from('tags')
+						.select('id')
+						.eq('name', tagName)
+						.maybeSingle();
+
+					let tagId = existingTag?.id;
+					if (!tagId) {
+						const slugTag = tagName.replace(/[^a-z0-9]+/g, '-');
+						const { data: newTag } = await locals.supabase
+							.from('tags')
+							.insert({ name: tagName, slug: slugTag })
+							.select('id')
+							.maybeSingle();
+						tagId = newTag?.id;
+					}
+					if (tagId) {
+						await locals.supabase
+							.from('listing_tags')
+							.insert({ listing_id: listing.id, tag_id: tagId });
+					}
+				} catch (tagErr) {
+					console.error('Tag processing error:', tagErr);
+				}
+			}
 		}
 
-		redirect(303, `/listings/${listing.slug}`);
+		// Redirect to dedicated canonical product page
+		redirect(303, `/product/${listing.slug}`);
 	}
 };
+
+function generateSlug(title: string): string {
+	const base = title
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 50);
+	const suffix = Math.random().toString(36).substring(2, 8);
+	return `${base}-${suffix}`;
+}
