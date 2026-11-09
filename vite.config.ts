@@ -16,6 +16,10 @@ export default defineConfig({
 			adapter: adapter()
 		})
 	],
+	server: {
+		host: '127.0.0.1',
+		allowedHosts: ['.ts.net']
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
