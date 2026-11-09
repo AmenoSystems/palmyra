@@ -20,7 +20,7 @@
 		User
 	} from 'lucide-svelte';
 	import ProductListingModal from '$lib/components/ProductListingModal.svelte';
-	import { getLocalOrders, updateLocalOrderStatus } from '$lib/orders';
+	import { getLocalOrders, updateLocalOrderStatus, getLocalBids, recordAuctionSale } from '$lib/orders';
 
 	let { data, form } = $props();
 
@@ -29,15 +29,17 @@
 	let showCreateModal = $state(false);
 
 	let purchaseRequests = $state<any[]>([]);
+	let incomingBids = $state<any[]>([]);
 
-	$effect(() => {
-		const local = getLocalOrders().filter((o) => o.seller_id === data.user?.id);
-		const server = data.purchaseRequests ?? [];
-		const combined = [...server];
-		for (const l of local) {
-			if (!combined.some((c) => c.id === l.id)) {
+	function syncData() {
+		// 1. Sync Purchase Requests
+		const localOrders = getLocalOrders().filter((o) => o.seller_id === data.user?.id);
+		const serverOrders = data.purchaseRequests ?? [];
+		const combinedOrders = [...serverOrders];
+		for (const l of localOrders) {
+			if (!combinedOrders.some((c) => c.id === l.id)) {
 				const img = l.listing?.listing_images?.[0]?.image_url ?? null;
-				combined.push({
+				combinedOrders.push({
 					id: l.id,
 					listing_id: l.listing_id,
 					title: l.listing?.title ?? 'Product',
@@ -47,12 +49,49 @@
 					status: l.status,
 					created_at: l.created_at,
 					buyer_id: l.buyer_id,
-					buyer_username: 'Buyer',
-					buyer_name: 'Buyer'
+					buyer_username: l.buyer?.username ?? 'Buyer',
+					buyer_name: l.buyer?.username ?? 'Buyer'
 				});
 			}
 		}
-		purchaseRequests = combined;
+		purchaseRequests = combinedOrders;
+
+		// 2. Sync Incoming Bids
+		const sellerListingIds = (data.listings ?? []).map((l: any) => l.id);
+		const localBids = getLocalBids().filter(
+			(b) => b.seller_id === data.user?.id || sellerListingIds.includes(b.listing_id)
+		);
+		const serverBids = data.incomingBids ?? [];
+		const combinedBids = [...serverBids];
+		for (const lb of localBids) {
+			if (!combinedBids.some((cb) => cb.id === lb.id || (cb.listing_id === lb.listing_id && cb.amount === lb.amount))) {
+				const parent = (data.listings ?? []).find((l: any) => l.id === lb.listing_id);
+				combinedBids.push({
+					id: lb.id,
+					amount: Number(lb.amount),
+					created_at: lb.created_at,
+					bidder_id: lb.bidder_id,
+					listing_id: lb.listing_id,
+					bidder_username: lb.bidder_username ?? 'Bidder',
+					listing_title: lb.title ?? parent?.title ?? 'Auction Item',
+					listing_slug: lb.slug ?? parent?.slug ?? lb.listing_id,
+					end_date: lb.end_date ?? parent?.end_date,
+					status: lb.status ?? 'active'
+				});
+			}
+		}
+		combinedBids.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+		incomingBids = combinedBids;
+	}
+
+	$effect(() => {
+		syncData();
+		window.addEventListener('orders-updated', syncData);
+		window.addEventListener('bids-updated', syncData);
+		return () => {
+			window.removeEventListener('orders-updated', syncData);
+			window.removeEventListener('bids-updated', syncData);
+		};
 	});
 
 	let pendingRequestsCount = $derived(
@@ -214,7 +253,7 @@
 				? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
 				: 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900'}"
 		>
-			<Gavel class="w-4 h-4" /> Incoming Bids ({data.incomingBids.length})
+			<Gavel class="w-4 h-4" /> Incoming Bids ({incomingBids.length})
 		</button>
 	</div>
 
@@ -397,7 +436,9 @@
 								<div class="flex flex-wrap items-center gap-3 text-xs text-stone-500 dark:text-stone-400 mt-1">
 									<span class="capitalize">{item.condition?.replace('_', ' ') ?? 'Standard'}</span>
 									<span>•</span>
-									<span class="flex items-center gap-1"><Eye class="w-3.5 h-3.5" /> {item.views ?? 0} views</span>
+									<span class="flex items-center gap-1" title="Unique visitor views">
+										<Eye class="w-3.5 h-3.5 text-stone-400" /> {item.views ?? 0} views
+									</span>
 									<span>•</span>
 									<span>Ends: {item.end_date ? new Date(item.end_date).toLocaleDateString() : 'Ongoing'}</span>
 								</div>
@@ -423,7 +464,7 @@
 						</div>
 
 						<!-- Right: Status Toggle & Actions -->
-						<div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-200 dark:border-stone-700">
+						<div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-200 dark:border-stone-700">
 							<span
 								class="px-2.5 py-1 text-xs font-semibold rounded-full border uppercase {item.status ===
 								'active'
@@ -434,6 +475,36 @@
 							>
 								{item.status}
 							</span>
+
+							<!-- Seller Option: Close Auction & Sell to Top Bidder -->
+							{#if item.status === 'active' && incomingBids.some((b) => b.listing_id === item.id)}
+								<form
+									method="POST"
+									action="?/closeAndSell"
+									use:enhance={() => {
+										return async ({ result, update }) => {
+											if (result.type === 'success' && (result.data as any)?.saleDetails) {
+												recordAuctionSale((result.data as any).saleDetails);
+											}
+											await update();
+										};
+									}}
+								>
+									<input type="hidden" name="listing_id" value={item.id} />
+									<input
+										type="hidden"
+										name="price"
+										value={item.current_price ?? item.starting_price}
+									/>
+									<button
+										type="submit"
+										class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors cursor-pointer flex items-center gap-1 shadow-xs"
+										title="Close auction immediately and sell to the current highest bidder"
+									>
+										<Gavel class="w-3.5 h-3.5" /> Sell to Top Bidder
+									</button>
+								</form>
+							{/if}
 
 							<!-- Toggle Active / Inactive -->
 							{#if item.status !== 'sold'}
@@ -468,7 +539,7 @@
 
 	<!-- ── TAB 3: INCOMING BIDS (Phase 8) ────────────────────────── -->
 	{:else if activeTab === 'bids'}
-		{#if data.incomingBids.length === 0}
+		{#if incomingBids.length === 0}
 			<div
 				class="backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-12 text-center"
 			>
@@ -484,31 +555,71 @@
 			<div
 				class="backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-6 divide-y divide-stone-200/40 dark:divide-stone-700/40"
 			>
-				{#each data.incomingBids as bid (bid.id)}
-					<div class="py-3.5 flex items-center justify-between">
-						<div>
+				{#each incomingBids as bid (bid.id)}
+					<div class="py-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4">
+						<div class="min-w-0">
 							<a
 								href={`/product/${bid.listing_slug}`}
-								class="font-semibold text-stone-900 dark:text-stone-100 hover:underline text-sm"
+								class="font-semibold text-stone-900 dark:text-stone-100 hover:underline text-sm block"
 							>
 								{bid.listing_title}
 							</a>
 							<p class="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
 								Bidder: <span class="font-medium text-stone-700 dark:text-stone-300">@{bid.bidder_username}</span>
-								• {new Date(bid.created_at).toLocaleString()}
+								• {new Date(bid.created_at).toLocaleString([], {
+									day: 'numeric',
+									month: 'short',
+									year: 'numeric',
+									hour: '2-digit',
+									minute: '2-digit'
+								})}
 							</p>
 						</div>
 
-						<div class="text-right">
-							<span class="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-								₹{bid.amount.toLocaleString('en-IN')}
-							</span>
-							<a
-								href={`/product/${bid.listing_slug}`}
-								class="block text-xs text-indigo-500 hover:underline mt-0.5"
-							>
-								View Listing →
-							</a>
+						<div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+							<div class="text-right">
+								<span class="text-lg font-bold text-emerald-600 dark:text-emerald-400 block">
+									₹{bid.amount.toLocaleString('en-IN')}
+								</span>
+								<a
+									href={`/product/${bid.listing_slug}`}
+									class="text-xs text-indigo-500 hover:underline"
+								>
+									View Listing →
+								</a>
+							</div>
+
+							<!-- Seller Action: Close Bidding & Sell to This Highest Bidder -->
+							{#if bid.status === 'won'}
+								<span class="px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-xs font-semibold">
+									Sold to Bidder
+								</span>
+							{:else}
+								<form
+									method="POST"
+									action="?/closeAndSell"
+									use:enhance={() => {
+										return async ({ result, update }) => {
+											if (result.type === 'success' && (result.data as any)?.saleDetails) {
+												recordAuctionSale((result.data as any).saleDetails);
+											}
+											await update();
+										};
+									}}
+								>
+									<input type="hidden" name="listing_id" value={bid.listing_id} />
+									<input type="hidden" name="buyer_id" value={bid.bidder_id} />
+									<input type="hidden" name="buyer_username" value={bid.bidder_username} />
+									<input type="hidden" name="price" value={bid.amount} />
+									<button
+										type="submit"
+										class="px-3 py-1.5 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+										title="Close auction immediately and sell to this bidder"
+									>
+										<Check class="w-3.5 h-3.5" /> Accept Bid & Sell
+									</button>
+								</form>
+							{/if}
 						</div>
 					</div>
 				{/each}

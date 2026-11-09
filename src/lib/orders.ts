@@ -73,6 +73,8 @@ export interface LocalBidRecord {
 	id: string;
 	listing_id: string;
 	bidder_id: string;
+	seller_id?: string;
+	bidder_username?: string;
 	amount: number;
 	created_at: string;
 	title?: string;
@@ -81,6 +83,7 @@ export interface LocalBidRecord {
 	current_highest?: number;
 	end_date?: string | null;
 	is_winning?: boolean;
+	status?: 'active' | 'outbid' | 'won' | 'closed';
 }
 
 const LOCAL_STORAGE_BIDS_KEY = 'palmyra_bids';
@@ -107,7 +110,68 @@ export function saveLocalBids(bids: LocalBidRecord[]) {
 
 export function addLocalBid(bid: LocalBidRecord) {
 	const current = getLocalBids();
-	const filtered = current.filter((b) => b.listing_id !== bid.listing_id);
-	saveLocalBids([bid, ...filtered]);
+	const filtered = current.filter((b) => b.id !== bid.id);
+	// Update any other bids for this listing so they know the new highest bid and are marked outbid
+	const updated = filtered.map((b) => {
+		if (b.listing_id === bid.listing_id) {
+			return {
+				...b,
+				current_highest: Math.max(Number(b.current_highest || 0), Number(bid.amount)),
+				is_winning: false,
+				status: (b.status === 'won' ? 'won' : 'outbid') as any
+			};
+		}
+		return b;
+	});
+	saveLocalBids([bid, ...updated]);
+}
+
+/**
+ * Closes an auction and creates an Accepted order for the winning bidder
+ */
+export function recordAuctionSale(sale: {
+	listing_id: string;
+	seller_id: string;
+	buyer_id: string;
+	price: number;
+	title: string;
+	slug: string;
+	image_url?: string | null;
+	buyer_username?: string;
+}) {
+	// 1. Mark local bid as 'won'
+	const bids = getLocalBids();
+	const updatedBids = bids.map((b) => {
+		if (b.listing_id === sale.listing_id) {
+			return {
+				...b,
+				is_winning: b.bidder_id === sale.buyer_id,
+				status: b.bidder_id === sale.buyer_id ? ('won' as const) : ('closed' as const)
+			};
+		}
+		return b;
+	});
+	saveLocalBids(updatedBids);
+
+	// 2. Add an Accepted order so buyer sees it in Purchases & Tracking
+	addLocalOrder({
+		id: crypto.randomUUID(),
+		listing_id: sale.listing_id,
+		buyer_id: sale.buyer_id,
+		seller_id: sale.seller_id,
+		price: sale.price,
+		quantity: 1,
+		status: 'Accepted',
+		created_at: new Date().toISOString(),
+		listing: {
+			id: sale.listing_id,
+			title: sale.title,
+			slug: sale.slug,
+			listing_images: sale.image_url ? [{ image_url: sale.image_url }] : []
+		},
+		buyer: {
+			username: sale.buyer_username ?? 'Buyer'
+		}
+	});
 }
 

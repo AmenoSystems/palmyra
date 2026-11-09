@@ -87,23 +87,50 @@ export const load: PageServerLoad = async ({ locals }) => {
 					`
           id, amount, created_at, bidder_id, listing_id,
           listings(id, title, slug, current_price, end_date),
-          profiles:profiles!bids_bidder_id_fkey(username)
+          profiles(username)
         `
 				)
 				.in('listing_id', sellerListingIds)
 				.order('created_at', { ascending: false })
-				.limit(20);
+				.limit(50);
 
 			if (!bErr && bidsData) {
 				incomingBids = bidsData.map((b: any) => ({
 					id: b.id,
 					amount: Number(b.amount),
 					created_at: b.created_at,
+					bidder_id: b.bidder_id,
+					listing_id: b.listing_id,
 					bidder_username: b.profiles?.username ?? 'Bidder',
 					listing_title: b.listings?.title ?? 'Auction Item',
 					listing_slug: b.listings?.slug ?? b.listing_id,
 					end_date: b.listings?.end_date
 				}));
+			} else {
+				// Fallback if join with profiles fails
+				const { data: rawBids } = await locals.supabase
+					.from('bids')
+					.select('id, amount, created_at, bidder_id, listing_id')
+					.in('listing_id', sellerListingIds)
+					.order('created_at', { ascending: false })
+					.limit(50);
+
+				if (rawBids) {
+					incomingBids = rawBids.map((b: any) => {
+						const parent = listings.find((l) => l.id === b.listing_id);
+						return {
+							id: b.id,
+							amount: Number(b.amount),
+							created_at: b.created_at,
+							bidder_id: b.bidder_id,
+							listing_id: b.listing_id,
+							bidder_username: 'Bidder',
+							listing_title: parent?.title ?? 'Auction Item',
+							listing_slug: parent?.slug ?? b.listing_id,
+							end_date: parent?.end_date
+						};
+					});
+				}
 			}
 		}
 	} catch (e) {
@@ -228,5 +255,102 @@ export const actions: Actions = {
 		}
 
 		return { success: true, message: `Listing status updated to ${newStatus}.` };
+	},
+
+	closeAndSell: async ({ request, locals }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401, { message: 'Unauthorized' });
+
+		const formData = await request.formData();
+		const listingId = formData.get('listing_id') as string;
+		const buyerId = formData.get('buyer_id') as string;
+		const buyerUsername = (formData.get('buyer_username') as string) || 'Buyer';
+		const formPrice = Number(formData.get('price'));
+
+		if (!listingId) return fail(400, { message: 'Listing ID is required' });
+
+		// Fetch listing to verify ownership
+		const { data: listing } = await locals.supabase
+			.from('listings')
+			.select('id, seller_id, title, slug, current_price, starting_price, listing_images(image_url)')
+			.eq('id', listingId)
+			.eq('seller_id', user.id)
+			.maybeSingle();
+
+		if (!listing) return fail(404, { message: 'Listing not found or unauthorized' });
+
+		let winnerId = buyerId;
+		let finalPrice = formPrice;
+		let winnerUsername = buyerUsername;
+
+		if (!winnerId || !finalPrice) {
+			const { data: topBid } = await locals.supabase
+				.from('bids')
+				.select('id, amount, bidder_id, profiles(username)')
+				.eq('listing_id', listingId)
+				.order('amount', { ascending: false })
+				.limit(1)
+				.maybeSingle();
+
+			if (topBid) {
+				winnerId = topBid.bidder_id;
+				finalPrice = Number(topBid.amount);
+				winnerUsername = (topBid.profiles as any)?.username || 'Buyer';
+			}
+		}
+
+		if (!winnerId) {
+			return fail(400, { message: 'Cannot close auction: no bids recorded for this listing.' });
+		}
+
+		// 1. Mark listing as sold
+		await locals.supabase
+			.from('listings')
+			.update({ status: 'sold', current_price: finalPrice, updated_at: new Date().toISOString() })
+			.eq('id', listingId)
+			.eq('seller_id', user.id);
+
+		// 2. Insert order with Accepted status
+		let orderId = crypto.randomUUID();
+		try {
+			const { data: insertedOrder } = await locals.supabase
+				.from('orders')
+				.insert({
+					listing_id: listingId,
+					buyer_id: winnerId,
+					seller_id: user.id,
+					price: finalPrice,
+					quantity: 1,
+					status: 'Accepted'
+				})
+				.select('id')
+				.maybeSingle();
+
+			if (insertedOrder) {
+				orderId = insertedOrder.id;
+			}
+		} catch (e) {
+			console.error('Order insert error on seller closeAndSell:', e);
+		}
+
+		const images = listing.listing_images ?? [];
+		const primaryImg = images[0]?.image_url ?? null;
+
+		return {
+			success: true,
+			auctionClosed: true,
+			message: `Auction closed! Item sold to @${winnerUsername} for ₹${finalPrice.toLocaleString('en-IN')}.`,
+			saleDetails: {
+				order_id: orderId,
+				listing_id: listingId,
+				seller_id: user.id,
+				buyer_id: winnerId,
+				buyer_username: winnerUsername,
+				price: finalPrice,
+				title: listing.title,
+				slug: listing.slug,
+				image_url: primaryImg
+			}
+		};
 	}
 };

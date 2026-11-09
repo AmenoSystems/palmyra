@@ -22,6 +22,7 @@
 	let { data, form } = $props();
 
 	let activeTab = $state<'purchases' | 'bids' | 'tracking'>('purchases');
+	let trackingFilter = $state<'all' | 'orders' | 'bids'>('all');
 	let purchases = $state<any[]>([]);
 	let myBids = $state<any[]>([]);
 
@@ -57,7 +58,8 @@
 		const serverBids = data.myBids ?? [];
 		const combinedBids = [...serverBids];
 		for (const lb of localBids) {
-			if (!combinedBids.some((cb) => cb.listing_id === lb.listing_id)) {
+			const existingIdx = combinedBids.findIndex((cb) => cb.listing_id === lb.listing_id);
+			if (existingIdx === -1) {
 				combinedBids.push({
 					bid_id: lb.id,
 					listing_id: lb.listing_id,
@@ -68,9 +70,22 @@
 					current_highest: Number(lb.current_highest ?? lb.amount),
 					end_date: lb.end_date,
 					is_ended: lb.end_date ? new Date(lb.end_date) < new Date() : false,
-					is_winning: true,
+					is_winning: lb.is_winning ?? (lb.status === 'won' || lb.status === 'active'),
+					status: lb.status ?? 'active',
 					listing_status: 'active'
 				});
+			} else {
+				if (lb.status) {
+					combinedBids[existingIdx].status = lb.status;
+					if (lb.status === 'won') {
+						combinedBids[existingIdx].is_winning = true;
+					} else if (lb.status === 'outbid') {
+						combinedBids[existingIdx].is_winning = false;
+					}
+				}
+				if (lb.current_highest) {
+					combinedBids[existingIdx].current_highest = Number(lb.current_highest);
+				}
 			}
 		}
 		myBids = combinedBids;
@@ -169,7 +184,7 @@
 				? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
 				: 'border-transparent text-stone-600 dark:text-stone-400 hover:text-stone-900'}"
 		>
-			<Clock class="w-4 h-4" /> Order Tracking ({purchases.length})
+			<Clock class="w-4 h-4" /> Order Tracking ({purchases.length + myBids.length})
 		</button>
 	</div>
 
@@ -356,17 +371,50 @@
 	<!-- TAB 3: ORDER TRACKING -->
 	{:else if activeTab === 'tracking'}
 		<div class="space-y-6">
-			<!-- Order Tracking List -->
-			{#if purchases.length === 0}
+			<!-- Filter Selector -->
+			<div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-stone-200/50 dark:border-stone-700/50">
+				<div class="flex items-center gap-2">
+					<button
+						onclick={() => (trackingFilter = 'all')}
+						class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer {trackingFilter ===
+						'all'
+							? 'bg-indigo-600 text-white shadow-xs'
+							: 'bg-stone-200/60 dark:bg-stone-700/40 text-stone-700 dark:text-stone-300 hover:bg-stone-300 dark:hover:bg-stone-600'}"
+					>
+						All Activity ({purchases.length + myBids.length})
+					</button>
+					<button
+						onclick={() => (trackingFilter = 'orders')}
+						class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer {trackingFilter ===
+						'orders'
+							? 'bg-indigo-600 text-white shadow-xs'
+							: 'bg-stone-200/60 dark:bg-stone-700/40 text-stone-700 dark:text-stone-300 hover:bg-stone-300 dark:hover:bg-stone-600'}"
+					>
+						Purchase Requests ({purchases.length})
+					</button>
+					<button
+						onclick={() => (trackingFilter = 'bids')}
+						class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer {trackingFilter ===
+						'bids'
+							? 'bg-indigo-600 text-white shadow-xs'
+							: 'bg-stone-200/60 dark:bg-stone-700/40 text-stone-700 dark:text-stone-300 hover:bg-stone-300 dark:hover:bg-stone-600'}"
+					>
+						Auction Bids ({myBids.length})
+					</button>
+				</div>
+			</div>
+
+			<!-- Empty State when nothing to track -->
+			{#if purchases.length === 0 && myBids.length === 0}
 				<div
 					class="backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/30 p-12 text-center"
 				>
 					<Clock class="w-12 h-12 text-stone-400 mx-auto mb-3" />
 					<h3 class="text-lg font-bold text-stone-800 dark:text-stone-200 mb-1">
-						No purchase requests to track
+						No marketplace activity to track
 					</h3>
 					<p class="text-xs text-stone-500 dark:text-stone-400 mb-6">
-						Submit a Buy Now request or checkout products to track fulfillment progression here.
+						Submit a Buy Now request, checkout products, or place auction bids to track their fulfillment progression here.
 					</p>
 					<a
 						href="/listings"
@@ -376,167 +424,394 @@
 					</a>
 				</div>
 			{:else}
-				<div class="space-y-4">
-					{#each purchases as order (order.id)}
-						<div
-							class="backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/30 p-5 md:p-6 space-y-5"
-						>
-							<!-- Order Header: ID & Status Pill -->
-							<div class="flex flex-wrap items-center justify-between gap-3 border-b border-stone-300/40 dark:border-stone-700/40 pb-3">
-								<div>
-									<span class="text-xs font-mono text-stone-500 dark:text-stone-400 block">
-										Order #{order.id.slice(0, 8)}
-									</span>
-									<span class="text-xs text-stone-400">
-										Placed on {new Date(order.created_at).toLocaleDateString([], {
-											day: 'numeric',
-											month: 'short',
-											year: 'numeric',
-											hour: '2-digit',
-											minute: '2-digit'
-										})}
-									</span>
-								</div>
+				<div class="space-y-5">
+					<!-- SECTION 1: Tracked Purchases / Orders -->
+					{#if (trackingFilter === 'all' || trackingFilter === 'orders') && purchases.length > 0}
+						<div class="space-y-4">
+							{#if trackingFilter === 'all'}
+								<h3 class="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 flex items-center gap-1.5">
+									<ShoppingBag class="w-3.5 h-3.5 text-indigo-500" />
+									Purchase Requests ({purchases.length})
+								</h3>
+							{/if}
 
-								<div class="flex items-center gap-2">
-									<span
-										class="px-3 py-1 text-xs font-bold rounded-full border {STATUS_STYLES[
-											order.status
-										] ?? 'bg-stone-100 text-stone-700'}"
-									>
-										{order.status}
-									</span>
-								</div>
-							</div>
-
-							<!-- Order Item Details -->
-							<div class="flex items-center gap-4">
-								<a
-									href={`/product/${order.slug}`}
-									class="w-16 sm:w-20 aspect-[4/3] rounded-xl overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
+							{#each purchases as order (order.id)}
+								<div
+									class="backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/30 p-5 md:p-6 space-y-5"
 								>
-									{#if order.image_url}
-										<img
-											src={order.image_url}
-											alt={order.title}
-											class="w-full h-full object-cover"
-										/>
-									{:else}
-										<div class="w-full h-full flex items-center justify-center text-xs text-stone-400">
-											No img
+									<!-- Order Header: ID & Status Pill -->
+									<div class="flex flex-wrap items-center justify-between gap-3 border-b border-stone-300/40 dark:border-stone-700/40 pb-3">
+										<div>
+											<span class="text-xs font-mono text-stone-500 dark:text-stone-400 block">
+												Order #{order.id.slice(0, 8)}
+											</span>
+											<span class="text-xs text-stone-400">
+												Placed on {new Date(order.created_at).toLocaleDateString([], {
+													day: 'numeric',
+													month: 'short',
+													year: 'numeric',
+													hour: '2-digit',
+													minute: '2-digit'
+												})}
+											</span>
 										</div>
-									{/if}
-								</a>
 
-								<div class="min-w-0 flex-1">
-									<a
-										href={`/product/${order.slug}`}
-										class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm sm:text-base"
-									>
-										{order.title}
-									</a>
-									<p class="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-										Seller: <span class="font-medium text-stone-700 dark:text-stone-300">@{order.seller_username}</span>
-									</p>
-									<span class="text-base font-bold text-stone-900 dark:text-stone-100 mt-1 block">
-										₹{order.price.toLocaleString('en-IN')}
-									</span>
-								</div>
-							</div>
-
-							<!-- 3-Step Interactive Tracking Progression Stepper -->
-							<div class="pt-2">
-								<div class="grid grid-cols-3 gap-2 text-center text-xs relative">
-									<!-- Connecting Line -->
-									<div class="absolute top-4 left-[16%] right-[16%] h-0.5 bg-stone-300 dark:bg-stone-700 -z-0">
-										<div
-											class="h-full bg-indigo-600 transition-all duration-500"
-											style="width: {order.status === 'Accepted' || order.status === 'Delivered' ? '100%' : order.status === 'Pending Seller Approval' ? '50%' : '0%'}"
-										></div>
+										<div class="flex items-center gap-2">
+											<span
+												class="px-3 py-1 text-xs font-bold rounded-full border {STATUS_STYLES[
+													order.status
+												] ?? 'bg-stone-100 text-stone-700'}"
+											>
+												{order.status}
+											</span>
+										</div>
 									</div>
 
-									<!-- Step 1 -->
-									<div class="flex flex-col items-center relative z-10">
-										<div class="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center mb-1.5 shadow-sm">
-											<CheckCircle2 class="w-4 h-4" />
-										</div>
-										<strong class="text-stone-900 dark:text-stone-100 font-semibold">Request Sent</strong>
-										<span class="text-[10px] text-stone-400">Submitted</span>
-									</div>
-
-									<!-- Step 2 -->
-									<div class="flex flex-col items-center relative z-10">
-										<div
-											class="w-8 h-8 rounded-full font-bold flex items-center justify-center mb-1.5 shadow-sm {order.status ===
-											'Pending Seller Approval'
-												? 'bg-amber-500 text-white animate-pulse'
-												: order.status === 'Accepted' || order.status === 'Delivered'
-													? 'bg-emerald-500 text-white'
-													: order.status === 'Rejected'
-														? 'bg-rose-500 text-white'
-														: 'bg-stone-300 dark:bg-stone-700 text-stone-600 dark:text-stone-400'}"
+									<!-- Order Item Details -->
+									<div class="flex items-center gap-4">
+										<a
+											href={`/product/${order.slug}`}
+											class="w-16 sm:w-20 aspect-[4/3] rounded-xl overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
 										>
-											{#if order.status === 'Accepted' || order.status === 'Delivered'}
-												<CheckCircle2 class="w-4 h-4" />
-											{:else if order.status === 'Rejected'}
-												<XCircle class="w-4 h-4" />
+											{#if order.image_url}
+												<img
+													src={order.image_url}
+													alt={order.title}
+													class="w-full h-full object-cover"
+												/>
 											{:else}
-												<Clock class="w-4 h-4" />
+												<div class="w-full h-full flex items-center justify-center text-xs text-stone-400">
+													No img
+												</div>
 											{/if}
+										</a>
+
+										<div class="min-w-0 flex-1">
+											<a
+												href={`/product/${order.slug}`}
+												class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm sm:text-base"
+											>
+												{order.title}
+											</a>
+											<p class="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+												Seller: <span class="font-medium text-stone-700 dark:text-stone-300">@{order.seller_username}</span>
+											</p>
+											<span class="text-base font-bold text-stone-900 dark:text-stone-100 mt-1 block">
+												₹{order.price.toLocaleString('en-IN')}
+											</span>
 										</div>
-										<strong class="text-stone-900 dark:text-stone-100 font-semibold">Seller Review</strong>
-										<span class="text-[10px] text-stone-400">
-											{order.status === 'Pending Seller Approval' ? 'Pending Approval' : order.status === 'Rejected' ? 'Declined' : 'Reviewed'}
-										</span>
 									</div>
 
-									<!-- Step 3 -->
-									<div class="flex flex-col items-center relative z-10">
-										<div
-											class="w-8 h-8 rounded-full font-bold flex items-center justify-center mb-1.5 shadow-sm {order.status ===
-											'Accepted' || order.status === 'Delivered'
-												? 'bg-emerald-500 text-white'
-												: order.status === 'Rejected'
-													? 'bg-rose-500 text-white'
-													: 'bg-stone-300 dark:bg-stone-700 text-stone-600 dark:text-stone-400'}"
-										>
-											{#if order.status === 'Accepted' || order.status === 'Delivered'}
-												<PackageCheck class="w-4 h-4" />
-											{:else if order.status === 'Rejected'}
-												<Ban class="w-4 h-4" />
-											{:else}
-												<FileText class="w-4 h-4" />
-											{/if}
+									<!-- 3-Step Interactive Tracking Progression Stepper -->
+									<div class="pt-2">
+										<div class="grid grid-cols-3 gap-2 text-center text-xs relative">
+											<!-- Connecting Line -->
+											<div class="absolute top-4 left-[16%] right-[16%] h-0.5 bg-stone-300 dark:bg-stone-700 -z-0">
+												<div
+													class="h-full bg-indigo-600 transition-all duration-500"
+													style="width: {order.status === 'Accepted' || order.status === 'Delivered' ? '100%' : order.status === 'Pending Seller Approval' ? '50%' : '0%'}"
+												></div>
+											</div>
+
+											<!-- Step 1 -->
+											<div class="flex flex-col items-center relative z-10">
+												<div class="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center mb-1.5 shadow-sm">
+													<CheckCircle2 class="w-4 h-4" />
+												</div>
+												<strong class="text-stone-900 dark:text-stone-100 font-semibold">Request Sent</strong>
+												<span class="text-[10px] text-stone-400">Submitted</span>
+											</div>
+
+											<!-- Step 2 -->
+											<div class="flex flex-col items-center relative z-10">
+												<div
+													class="w-8 h-8 rounded-full font-bold flex items-center justify-center mb-1.5 shadow-sm {order.status ===
+													'Pending Seller Approval'
+														? 'bg-amber-500 text-white animate-pulse'
+														: order.status === 'Accepted' || order.status === 'Delivered'
+															? 'bg-emerald-500 text-white'
+															: order.status === 'Rejected'
+																? 'bg-rose-500 text-white'
+																: 'bg-stone-300 dark:bg-stone-700 text-stone-600 dark:text-stone-400'}"
+												>
+													{#if order.status === 'Accepted' || order.status === 'Delivered'}
+														<CheckCircle2 class="w-4 h-4" />
+													{:else if order.status === 'Rejected'}
+														<XCircle class="w-4 h-4" />
+													{:else}
+														<Clock class="w-4 h-4" />
+													{/if}
+												</div>
+												<strong class="text-stone-900 dark:text-stone-100 font-semibold">Seller Review</strong>
+												<span class="text-[10px] text-stone-400">
+													{order.status === 'Pending Seller Approval' ? 'Pending Approval' : order.status === 'Rejected' ? 'Declined' : 'Reviewed'}
+												</span>
+											</div>
+
+											<!-- Step 3 -->
+											<div class="flex flex-col items-center relative z-10">
+												<div
+													class="w-8 h-8 rounded-full font-bold flex items-center justify-center mb-1.5 shadow-sm {order.status ===
+													'Accepted' || order.status === 'Delivered'
+														? 'bg-emerald-500 text-white'
+														: order.status === 'Rejected'
+															? 'bg-rose-500 text-white'
+															: 'bg-stone-300 dark:bg-stone-700 text-stone-600 dark:text-stone-400'}"
+												>
+													{#if order.status === 'Accepted' || order.status === 'Delivered'}
+														<PackageCheck class="w-4 h-4" />
+													{:else if order.status === 'Rejected'}
+														<Ban class="w-4 h-4" />
+													{:else}
+														<FileText class="w-4 h-4" />
+													{/if}
+												</div>
+												<strong class="text-stone-900 dark:text-stone-100 font-semibold">
+													{order.status === 'Rejected' ? 'Declined' : 'Confirmed'}
+												</strong>
+												<span class="text-[10px] text-stone-400">
+													{order.status === 'Accepted' ? 'Item Reserved' : order.status === 'Rejected' ? 'Request Rejected' : 'Awaiting Approval'}
+												</span>
+											</div>
 										</div>
-										<strong class="text-stone-900 dark:text-stone-100 font-semibold">
-											{order.status === 'Rejected' ? 'Declined' : 'Confirmed'}
-										</strong>
-										<span class="text-[10px] text-stone-400">
-											{order.status === 'Accepted' ? 'Item Reserved' : order.status === 'Rejected' ? 'Request Rejected' : 'Awaiting Approval'}
-										</span>
+									</div>
+
+									<!-- Explanatory note -->
+									<div class="p-3 rounded-xl bg-white/40 dark:bg-stone-800/40 text-xs text-stone-600 dark:text-stone-400 flex items-center gap-2">
+										{#if order.status === 'Pending Seller Approval'}
+											<Clock class="w-4 h-4 text-amber-500 shrink-0" />
+											<span>Under seller review. You have not been charged.</span>
+										{:else if order.status === 'Accepted'}
+											<CheckCircle2 class="w-4 h-4 text-emerald-500 shrink-0" />
+											<span class="text-emerald-700 dark:text-emerald-300 font-medium">
+												Purchase approved! The seller accepted your request and the product is reserved.
+											</span>
+										{:else if order.status === 'Rejected'}
+											<XCircle class="w-4 h-4 text-rose-500 shrink-0" />
+											<span class="text-rose-600 dark:text-rose-400">
+												The seller was unable to fulfill this request. No funds were transferred.
+											</span>
+										{/if}
 									</div>
 								</div>
-							</div>
-
-							<!-- Explanatory note -->
-							<div class="p-3 rounded-xl bg-white/40 dark:bg-stone-800/40 text-xs text-stone-600 dark:text-stone-400 flex items-center gap-2">
-								{#if order.status === 'Pending Seller Approval'}
-									<Clock class="w-4 h-4 text-amber-500 shrink-0" />
-									<span>Under seller review. You have not been charged.</span>
-								{:else if order.status === 'Accepted'}
-									<CheckCircle2 class="w-4 h-4 text-emerald-500 shrink-0" />
-									<span class="text-emerald-700 dark:text-emerald-300 font-medium">
-										Purchase approved! The seller accepted your request and the product is reserved.
-									</span>
-								{:else if order.status === 'Rejected'}
-									<XCircle class="w-4 h-4 text-rose-500 shrink-0" />
-									<span class="text-rose-600 dark:text-rose-400">
-										The seller was unable to fulfill this request. No funds were transferred.
-									</span>
-								{/if}
-							</div>
+							{/each}
 						</div>
-					{/each}
+					{/if}
+
+					<!-- SECTION 2: Tracked Auction Bids -->
+					{#if (trackingFilter === 'all' || trackingFilter === 'bids') && myBids.length > 0}
+						<div class="space-y-4">
+							{#if trackingFilter === 'all'}
+								<h3 class="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 flex items-center gap-1.5 pt-2">
+									<Gavel class="w-3.5 h-3.5 text-indigo-500" />
+									Auction Bids ({myBids.length})
+								</h3>
+							{/if}
+
+							{#each myBids as bid (bid.bid_id)}
+								<div
+									class="backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 rounded-2xl shadow-lg border border-white/20 dark:border-gray-700/30 p-5 md:p-6 space-y-5"
+								>
+									<!-- Bid Header: ID & Status Pill -->
+									<div class="flex flex-wrap items-center justify-between gap-3 border-b border-stone-300/40 dark:border-stone-700/40 pb-3">
+										<div>
+											<span class="text-xs font-mono text-stone-500 dark:text-stone-400 block">
+												Bid #{bid.bid_id.slice(0, 8)}
+											</span>
+											<span class="text-xs text-stone-400">
+												Auction ends: {bid.end_date ? new Date(bid.end_date).toLocaleDateString([], {
+													day: 'numeric',
+													month: 'short',
+													year: 'numeric'
+												}) : 'Ongoing'}
+											</span>
+										</div>
+
+										<div class="flex items-center gap-2">
+											{#if bid.status === 'won' || (bid.is_winning && bid.is_ended)}
+												<span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+													🎉 Auction Won • Reserved
+												</span>
+											{:else if bid.is_winning}
+												<span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+													Leading Bidder
+												</span>
+											{:else if !bid.is_winning && !bid.is_ended}
+												<span class="px-3 py-1 text-xs font-bold rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+													Outbid
+												</span>
+											{:else}
+												<span class="px-3 py-1 text-xs font-bold rounded-full bg-stone-500/10 text-stone-600 dark:text-stone-400 border border-stone-500/30">
+													Auction Ended
+												</span>
+											{/if}
+										</div>
+									</div>
+
+									<!-- Bid Item Details -->
+									<div class="flex items-center gap-4">
+										<a
+											href={`/product/${bid.slug}`}
+											class="w-16 sm:w-20 aspect-[4/3] rounded-xl overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
+										>
+											{#if bid.image_url}
+												<img
+													src={bid.image_url}
+													alt={bid.title}
+													class="w-full h-full object-cover"
+												/>
+											{:else}
+												<div class="w-full h-full flex items-center justify-center text-xs text-stone-400">
+													No img
+												</div>
+											{/if}
+										</a>
+
+										<div class="min-w-0 flex-1">
+											<a
+												href={`/product/${bid.slug}`}
+												class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm sm:text-base"
+											>
+												{bid.title}
+											</a>
+											<div class="flex flex-wrap items-center gap-4 mt-1.5 text-xs">
+												<div>
+													<span class="text-stone-400">Your Bid:</span>
+													<strong class="text-stone-900 dark:text-stone-100 font-bold ml-1">
+														₹{bid.my_bid.toLocaleString('en-IN')}
+													</strong>
+												</div>
+												<div>
+													<span class="text-stone-400">Current Highest:</span>
+													<strong class="text-indigo-600 dark:text-indigo-400 font-bold ml-1">
+														₹{bid.current_highest.toLocaleString('en-IN')}
+													</strong>
+												</div>
+											</div>
+										</div>
+
+										<div class="hidden sm:block shrink-0">
+											{#if !bid.is_winning && !bid.is_ended}
+												<a
+													href={`/product/${bid.slug}`}
+													class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
+												>
+													Raise Bid <ArrowRight class="w-3.5 h-3.5" />
+												</a>
+											{:else}
+												<a
+													href={`/product/${bid.slug}`}
+													class="px-3.5 py-2 rounded-xl border border-stone-300 dark:border-stone-700 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors flex items-center gap-1.5"
+												>
+													View Auction <ExternalLink class="w-3.5 h-3.5" />
+												</a>
+											{/if}
+										</div>
+									</div>
+
+									<!-- 3-Step Bid Progression Stepper -->
+									<div class="pt-2">
+										<div class="grid grid-cols-3 gap-2 text-center text-xs relative">
+											<!-- Connecting Line -->
+											<div class="absolute top-4 left-[16%] right-[16%] h-0.5 bg-stone-300 dark:bg-stone-700 -z-0">
+												<div
+													class="h-full bg-indigo-600 transition-all duration-500"
+													style="width: {bid.status === 'won' || (bid.is_winning && bid.is_ended) ? '100%' : '50%'}"
+												></div>
+											</div>
+
+											<!-- Step 1 -->
+											<div class="flex flex-col items-center relative z-10">
+												<div class="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold flex items-center justify-center mb-1.5 shadow-sm">
+													<CheckCircle2 class="w-4 h-4" />
+												</div>
+												<strong class="text-stone-900 dark:text-stone-100 font-semibold">Bid Placed</strong>
+												<span class="text-[10px] text-stone-400">₹{bid.my_bid.toLocaleString('en-IN')}</span>
+											</div>
+
+											<!-- Step 2 -->
+											<div class="flex flex-col items-center relative z-10">
+												<div
+													class="w-8 h-8 rounded-full font-bold flex items-center justify-center mb-1.5 shadow-sm {bid.status === 'won' || bid.is_winning
+														? 'bg-emerald-500 text-white'
+														: 'bg-rose-500 text-white'}"
+												>
+													{#if bid.status === 'won' || bid.is_winning}
+														<CheckCircle2 class="w-4 h-4" />
+													{:else}
+														<AlertCircle class="w-4 h-4" />
+													{/if}
+												</div>
+												<strong class="text-stone-900 dark:text-stone-100 font-semibold">
+													{bid.status === 'won' ? 'Winning Bid' : bid.is_winning ? 'Highest Bidder' : 'Outbid'}
+												</strong>
+												<span class="text-[10px] text-stone-400">
+													{bid.is_winning ? 'Currently Leading' : 'Higher Bid Placed'}
+												</span>
+											</div>
+
+											<!-- Step 3 -->
+											<div class="flex flex-col items-center relative z-10">
+												<div
+													class="w-8 h-8 rounded-full font-bold flex items-center justify-center mb-1.5 shadow-sm {bid.status === 'won' || (bid.is_winning && bid.is_ended)
+														? 'bg-emerald-500 text-white'
+														: bid.is_ended
+															? 'bg-stone-400 text-white'
+															: 'bg-stone-300 dark:bg-stone-700 text-stone-600 dark:text-stone-400'}"
+												>
+													{#if bid.status === 'won' || (bid.is_winning && bid.is_ended)}
+														<PackageCheck class="w-4 h-4" />
+													{:else if bid.is_ended}
+														<XCircle class="w-4 h-4" />
+													{:else}
+														<Clock class="w-4 h-4" />
+													{/if}
+												</div>
+												<strong class="text-stone-900 dark:text-stone-100 font-semibold">
+													{bid.status === 'won' || (bid.is_winning && bid.is_ended) ? 'Won & Reserved' : bid.is_ended ? 'Auction Closed' : 'Auction Active'}
+												</strong>
+												<span class="text-[10px] text-stone-400">
+													{bid.status === 'won' ? 'Item Reserved' : bid.is_ended ? 'Concluded' : 'In Progress'}
+												</span>
+											</div>
+										</div>
+									</div>
+
+									<!-- Explanatory note -->
+									<div class="p-3 rounded-xl bg-white/40 dark:bg-stone-800/40 text-xs text-stone-600 dark:text-stone-400 flex items-center justify-between gap-3">
+										<div class="flex items-center gap-2">
+											{#if bid.status === 'won' || (bid.is_winning && bid.is_ended)}
+												<CheckCircle2 class="w-4 h-4 text-emerald-500 shrink-0" />
+												<span class="text-emerald-700 dark:text-emerald-300 font-medium">
+													🎉 You won this auction! The seller accepted your bid and the product is reserved for you.
+												</span>
+											{:else if bid.is_winning}
+												<CheckCircle2 class="w-4 h-4 text-emerald-500 shrink-0" />
+												<span>You are currently the leading bidder. Keep an eye on incoming bids.</span>
+											{:else if !bid.is_winning && !bid.is_ended}
+												<AlertCircle class="w-4 h-4 text-rose-500 shrink-0" />
+												<span class="text-rose-600 dark:text-rose-400 font-medium">
+													You have been outbid! Raise your bid now to take back the lead.
+												</span>
+											{:else}
+												<Clock class="w-4 h-4 text-stone-400 shrink-0" />
+												<span>This auction has ended.</span>
+											{/if}
+										</div>
+
+										<div class="sm:hidden shrink-0">
+											<a
+												href={`/product/${bid.slug}`}
+												class="text-xs font-semibold text-indigo-600 hover:underline"
+											>
+												View →
+											</a>
+										</div>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			{/if}
 
@@ -546,20 +821,20 @@
 			>
 				<h4 class="text-xs font-bold text-stone-700 dark:text-stone-300 uppercase tracking-wider flex items-center gap-1.5">
 					<FileText class="w-3.5 h-3.5 text-indigo-500" />
-					How Order Tracking Works
+					How Marketplace Tracking Works
 				</h4>
 				<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-stone-500 dark:text-stone-400">
 					<div>
-						<strong class="block text-stone-800 dark:text-stone-200 mb-0.5">1. Buy Now Request</strong>
-						When you click Buy Now, your request is submitted with status "Pending Seller Approval".
+						<strong class="block text-stone-800 dark:text-stone-200 mb-0.5">1. Buy Now & Bids</strong>
+						Purchases start as "Pending Seller Approval" while bids remain live throughout the auction.
 					</div>
 					<div>
 						<strong class="block text-stone-800 dark:text-stone-200 mb-0.5">2. Seller Decision</strong>
-						The seller receives the request in their Seller Dashboard and chooses to Approve or Reject.
+						Sellers review purchase requests and can choose to close bidding early to sell to the top bidder.
 					</div>
 					<div>
 						<strong class="block text-stone-800 dark:text-stone-200 mb-0.5">3. Reservation</strong>
-						Once approved, the status updates to Accepted and the listing is marked sold.
+						Once approved or won, orders transition to Accepted and items are reserved for fulfillment.
 					</div>
 				</div>
 			</div>

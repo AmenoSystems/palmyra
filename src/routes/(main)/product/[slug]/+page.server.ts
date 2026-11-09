@@ -1,7 +1,7 @@
 import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, cookies }) => {
 	const slug = params.slug;
 
 	// Load listing from Supabase by slug OR by id (UUID)
@@ -41,12 +41,16 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		listing.listing_images.sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
 	}
 
-	// Increment view count
-	locals.supabase
-		.from('listings')
-		.update({ views: (listing.views ?? 0) + 1 })
-		.eq('id', listing.id)
-		.then(() => {});
+	// Increment view count consistently (only once per visitor session / 24h)
+	const viewCookieKey = `viewed_${listing.id}`;
+	if (!cookies.get(viewCookieKey)) {
+		cookies.set(viewCookieKey, '1', { path: '/', maxAge: 60 * 60 * 24 });
+		locals.supabase
+			.from('listings')
+			.update({ views: (listing.views ?? 0) + 1 })
+			.eq('id', listing.id)
+			.then(() => {});
+	}
 
 	// Load bid history and bid count
 	const { data: bids } = await locals.supabase
@@ -129,7 +133,7 @@ export const actions: Actions = {
 		const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.slug);
 		let q = locals.supabase
 			.from('listings')
-			.select('id, seller_id, current_price, starting_price, status, end_date');
+			.select('id, seller_id, current_price, starting_price, buy_it_now_price, status, end_date');
 		if (isUuid) {
 			q = q.or(`slug.eq.${params.slug},id.eq.${params.slug}`);
 		} else {
@@ -173,6 +177,13 @@ export const actions: Actions = {
 			});
 		}
 
+		// Condition: Buyer cannot place bids greater than or equal to Buy Now price
+		if (listing.buy_it_now_price && bidAmount >= Number(listing.buy_it_now_price)) {
+			return fail(400, {
+				message: `Bid cannot exceed or equal the Buy Now price of ₹${Number(listing.buy_it_now_price).toLocaleString('en-IN')}. Please use Buy Now instead.`
+			});
+		}
+
 		// Ensure profile exists for this bidder to satisfy bids foreign key
 		try {
 			await locals.supabase
@@ -205,7 +216,9 @@ export const actions: Actions = {
 				fallbackBid = {
 					id: crypto.randomUUID(),
 					listing_id: listing.id,
+					seller_id: listing.seller_id,
 					bidder_id: user.id,
+					bidder_username: user.email?.split('@')[0] ?? 'You',
 					amount: bidAmount,
 					created_at: new Date().toISOString(),
 					profiles: { username: user.email?.split('@')[0] ?? 'You' }
@@ -244,7 +257,16 @@ export const actions: Actions = {
 		return {
 			success: true,
 			bidPlaced: true,
-			fallbackBid,
+			fallbackBid: fallbackBid ?? {
+				id: bid?.id ?? crypto.randomUUID(),
+				listing_id: listing.id,
+				seller_id: listing.seller_id,
+				bidder_id: user.id,
+				bidder_username: user.email?.split('@')[0] ?? 'You',
+				amount: bidAmount,
+				created_at: new Date().toISOString(),
+				profiles: { username: user.email?.split('@')[0] ?? 'You' }
+			},
 			newAmount: bidAmount,
 			message: `Bid of ₹${bidAmount.toLocaleString('en-IN')} placed successfully!`
 		};
@@ -416,5 +438,106 @@ export const actions: Actions = {
 				.insert({ user_id: user.id, listing_id: listing.id });
 			return { success: true, isWatchlisted: true };
 		}
+	},
+
+	closeAndSell: async ({ locals, params, request }) => {
+		const user = await locals.getUser();
+		if (!user) return fail(401, { message: 'Unauthorized' });
+
+		const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(params.slug);
+		let q = locals.supabase
+			.from('listings')
+			.select('id, seller_id, title, slug, current_price, starting_price, status, listing_images(image_url)');
+		if (isUuid) {
+			q = q.or(`slug.eq.${params.slug},id.eq.${params.slug}`);
+		} else {
+			q = q.eq('slug', params.slug);
+		}
+		const { data: listing } = await q.maybeSingle();
+
+		if (!listing) return fail(404, { message: 'Listing not found' });
+		if (listing.seller_id !== user.id) {
+			return fail(403, { message: 'Only the seller can close this auction.' });
+		}
+		if (listing.status === 'sold') {
+			return fail(400, { message: 'This item is already sold.' });
+		}
+
+		// Read fallback form details
+		const formData = await request.formData();
+		const formBuyerId = formData.get('buyer_id') as string;
+		const formBuyerUsername = formData.get('buyer_username') as string;
+		const formPrice = Number(formData.get('price'));
+
+		// Query highest bid from Supabase bids table
+		const { data: topBid } = await locals.supabase
+			.from('bids')
+			.select('id, amount, bidder_id, profiles(username)')
+			.eq('listing_id', listing.id)
+			.order('amount', { ascending: false })
+			.limit(1)
+			.maybeSingle();
+
+		const winnerId = topBid?.bidder_id || formBuyerId;
+		const winningPrice = Number(topBid?.amount || formPrice || listing.current_price || listing.starting_price);
+		const winnerUsername = (topBid?.profiles as any)?.username || formBuyerUsername || 'Buyer';
+
+		if (!winnerId) {
+			return fail(400, { message: 'Cannot close and sell an auction with no bids.' });
+		}
+
+		// 1. Update listing status to 'sold'
+		await locals.supabase
+			.from('listings')
+			.update({
+				status: 'sold',
+				current_price: winningPrice,
+				updated_at: new Date().toISOString()
+			})
+			.eq('id', listing.id)
+			.eq('seller_id', user.id);
+
+		// 2. Insert order record with status 'Accepted'
+		let orderId = crypto.randomUUID();
+		try {
+			const { data: insertedOrder } = await locals.supabase
+				.from('orders')
+				.insert({
+					listing_id: listing.id,
+					buyer_id: winnerId,
+					seller_id: user.id,
+					price: winningPrice,
+					quantity: 1,
+					status: 'Accepted'
+				})
+				.select('id')
+				.maybeSingle();
+
+			if (insertedOrder) {
+				orderId = insertedOrder.id;
+			}
+		} catch (e) {
+			console.error('Order insert error on closeAndSell:', e);
+		}
+
+		const images = listing.listing_images ?? [];
+		const primaryImg = images[0]?.image_url ?? null;
+
+		return {
+			success: true,
+			auctionClosed: true,
+			message: `Auction successfully closed! Item sold to @${winnerUsername} for ₹${winningPrice.toLocaleString('en-IN')}.`,
+			saleDetails: {
+				order_id: orderId,
+				listing_id: listing.id,
+				seller_id: user.id,
+				buyer_id: winnerId,
+				buyer_username: winnerUsername,
+				price: winningPrice,
+				title: listing.title,
+				slug: listing.slug,
+				image_url: primaryImg
+			}
+		};
 	}
 };

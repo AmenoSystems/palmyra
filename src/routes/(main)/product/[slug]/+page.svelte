@@ -21,7 +21,7 @@
 	} from 'lucide-svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { addToCart } from '$lib/cart';
-	import { addLocalOrder, addLocalBid } from '$lib/orders';
+	import { addLocalOrder, addLocalBid, recordAuctionSale } from '$lib/orders';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data, form } = $props();
@@ -429,9 +429,49 @@
 					</h3>
 
 					{#if isOwner}
-						<div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
-							<AlertCircle class="w-4 h-4 shrink-0" />
-							<span>You are the seller of this product. You cannot bid on your own auction.</span>
+						<div class="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs space-y-2.5">
+							<div class="flex items-center gap-2 font-medium">
+								<AlertCircle class="w-4 h-4 shrink-0" />
+								<span>You are the seller of this product. You cannot bid on your own auction.</span>
+							</div>
+
+							{#if listing.status === 'active' && bids.length > 0}
+								<div class="pt-2 border-t border-amber-500/20">
+									<p class="text-xs text-stone-600 dark:text-stone-300 mb-2">
+										Current Top Bid: <strong class="text-emerald-600 dark:text-emerald-400 font-bold">₹{currentPrice.toLocaleString('en-IN')}</strong>
+										{#if bids[0]?.profiles?.username}
+											by @{bids[0].profiles.username}
+										{/if}
+									</p>
+									<form
+										method="POST"
+										action="?/closeAndSell"
+										use:enhance={() => {
+											return async ({ result, update }) => {
+												if (result.type === 'success' && (result.data as any)?.saleDetails) {
+													recordAuctionSale((result.data as any).saleDetails);
+												}
+												await update();
+											};
+										}}
+									>
+										<input type="hidden" name="buyer_id" value={bids[0]?.bidder_id ?? ''} />
+										<input type="hidden" name="buyer_username" value={bids[0]?.profiles?.username ?? 'Bidder'} />
+										<input type="hidden" name="price" value={currentPrice} />
+										<button
+											type="submit"
+											class="w-full py-2.5 px-4 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:opacity-95 text-white font-semibold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+										>
+											<CheckCircle2 class="w-4 h-4" /> Close Bidding & Sell to Highest Bidder (₹{currentPrice.toLocaleString('en-IN')})
+										</button>
+									</form>
+								</div>
+							{:else if listing.status === 'sold'}
+								<div class="pt-1 text-emerald-600 dark:text-emerald-400 font-semibold text-xs flex items-center gap-1.5">
+									<CheckCircle2 class="w-4 h-4" />
+									<span>This product has been sold.</span>
+								</div>
+							{/if}
 						</div>
 					{:else if !data.currentUser}
 						<button
@@ -451,27 +491,44 @@
 									if (result.type === 'success') {
 										const newAmount = (result.data as any)?.newAmount;
 										const fb = (result.data as any)?.fallbackBid;
-										if (fb) {
-											addLocalBid({
-												id: fb.id,
-												listing_id: fb.listing_id,
-												bidder_id: fb.bidder_id,
-												amount: fb.amount,
-												created_at: fb.created_at,
-												title: listing.title,
-												slug: listing.slug,
-												image_url: activeImage,
-												current_highest: newAmount,
-												end_date: listing.end_date,
-												is_winning: true
-											});
-										}
+										const bidRecord = fb ?? {
+											id: crypto.randomUUID(),
+											listing_id: listing.id,
+											seller_id: listing.seller_id,
+											bidder_id: data.currentUser?.id ?? '',
+											bidder_username: data.currentUser?.email?.split('@')[0] ?? 'You',
+											amount: Number(newAmount),
+											created_at: new Date().toISOString(),
+											title: listing.title,
+											slug: listing.slug,
+											image_url: activeImage,
+											current_highest: Number(newAmount),
+											end_date: listing.end_date,
+											is_winning: true,
+											status: 'active'
+										};
+										addLocalBid({
+											id: bidRecord.id,
+											listing_id: bidRecord.listing_id,
+											seller_id: listing.seller_id,
+											bidder_id: bidRecord.bidder_id,
+											bidder_username: bidRecord.bidder_username ?? 'You',
+											amount: Number(bidRecord.amount),
+											created_at: bidRecord.created_at,
+											title: listing.title,
+											slug: listing.slug,
+											image_url: activeImage,
+											current_highest: Number(newAmount ?? bidRecord.amount),
+											end_date: listing.end_date,
+											is_winning: true,
+											status: 'active'
+										});
 										if (newAmount) {
 											currentPrice = Number(newAmount);
 											bidCount += 1;
 											bids = [
 												{
-													id: crypto.randomUUID(),
+													id: bidRecord.id,
 													amount: newAmount,
 													created_at: new Date().toISOString(),
 													profiles: { username: data.currentUser?.email?.split('@')[0] ?? 'You' }
@@ -494,6 +551,7 @@
 									name="bid_amount"
 									type="number"
 									min={minNextBid}
+									max={listing.buy_it_now_price ? Number(listing.buy_it_now_price) - 1 : undefined}
 									step="1"
 									required
 									placeholder={`Min bid: ₹${minNextBid.toLocaleString('en-IN')}`}
@@ -502,9 +560,16 @@
 								/>
 							</div>
 
+							{#if listing.buy_it_now_price && bidAmount && Number(bidAmount) >= Number(listing.buy_it_now_price)}
+								<div class="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+									<AlertCircle class="w-3.5 h-3.5 shrink-0" />
+									<span>Bids cannot reach or exceed the Buy Now price of ₹{Number(listing.buy_it_now_price).toLocaleString('en-IN')}. Please use Buy Now below instead.</span>
+								</div>
+							{/if}
+
 							<button
 								type="submit"
-								disabled={isBidding || !bidAmount || Number(bidAmount) <= currentPrice}
+								disabled={isBidding || !bidAmount || Number(bidAmount) <= currentPrice || (listing.buy_it_now_price && Number(bidAmount) >= Number(listing.buy_it_now_price))}
 								class="w-full py-3.5 rounded-xl bg-linear-to-r from-indigo-600 to-indigo-700 hover:opacity-95 disabled:opacity-50 text-white font-semibold text-sm transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
 							>
 								{#if isBidding}
