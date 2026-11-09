@@ -80,7 +80,7 @@
 	function canProceedStep2(): boolean {
 		return (
 			title.trim().length >= 3 &&
-			description.trim().length >= 10 &&
+			description.trim().length &&
 			!!selectedSubcategoryId &&
 			!!condition
 		);

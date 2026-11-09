@@ -21,15 +21,6 @@
 		return () => document.removeEventListener('keydown', handleKeyDown);
 	});
 
-	// Sync with URL query on mount / route change
-	$effect(() => {
-		const q = $page.url.searchParams.get('q');
-		if (q && !searchQuery) {
-			searchQuery = q;
-		}
-	});
-	
-
 	function applyFilters(p = 1) {
 		const params = new SvelteURLSearchParams();
 		if (searchQuery) params.set('q', searchQuery);

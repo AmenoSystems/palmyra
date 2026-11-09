@@ -1,248 +1,133 @@
 import { redirect, fail } from '@sveltejs/kit';
+import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import type { PageServerLoad, Actions } from './$types';
-import {
-	CANONICAL_CATEGORIES,
-	CANONICAL_SUBCATEGORIES,
-	type Category,
-	type Subcategory
-} from '$lib/constants/categories';
+
+const CONDITIONS = ['new', 'like_new', 'good', 'fair', 'poor'];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = await locals.getUser();
-	if (!user) redirect(303, '/auth/signin?next=/sell');
+	if (!user) redirect(303, '/signin?next=/sell');
 
-	// Attempt loading categories from database; fallback to canonical list if table is empty
-	let categories: Category[] = CANONICAL_CATEGORIES;
-	let subcategories: Subcategory[] = CANONICAL_SUBCATEGORIES;
-
-	try {
-		const { data: dbCats, error: catError } = await locals.supabase
-			.from('categories')
-			.select('id, name, slug')
-			.order('name');
-
-		if (!catError && dbCats && dbCats.length > 0) {
-			categories = dbCats;
-		}
-
-		const { data: dbSubcats, error: subError } = await locals.supabase
-			.from('subcategories')
-			.select('id, category_id, name, slug')
-			.order('name');
-
-		if (!subError && dbSubcats && dbSubcats.length > 0) {
-			subcategories = dbSubcats;
-		}
-	} catch (err) {
-		console.warn('Using canonical categories fallback:', err);
-	}
-
+	const [cats, subs] = await Promise.all([
+		locals.supabase.from('categories').select('id, name, slug').order('name'),
+		locals.supabase.from('subcategories').select('id, category_id, name, slug').order('name')
+	]);
+	if (cats.error) console.error(cats.error);
+	if (subs.error) console.error(subs.error);
 	return {
-		user: { id: user.id, email: user.email! },
-		categories,
-		subcategories
+		user: { id: user.id },
+		categories: cats.data ?? [],
+		subcategories: subs.data ?? []
 	};
 };
 
+function slugify(s: string) {
+	const base = s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+	return `${base || 'item'}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export const actions: Actions = {
 	default: async ({ request, locals }) => {
+		console.log('SELL ACTION HIT');
 		const user = await locals.getUser();
-		if (!user) return fail(401, { message: 'Unauthorized. Please sign in.' });
+		console.log('user:', user?.id);
+		if (!user) return fail(401, { message: 'Please sign in.' });
 
-		const formData = await request.formData();
+		const f = await request.formData();
+		console.log('FORM FIELDS:', Object.fromEntries(
+			[...f.entries()].map(([k, v]) => [k, k === 'images_json' ? `[${String(v).length} chars]` : v])
+		));
+		
+		const str = (k: string) => String(f.get(k) ?? '').trim();
+		const num = (k: string) => (str(k) === '' ? null : Number(str(k)));
 
-		const title = (formData.get('title') as string)?.trim();
-		const description = (formData.get('description') as string)?.trim();
-		const subcategoryId = (formData.get('subcategory_id') as string)?.trim();
-		const condition = (formData.get('condition') as string)?.trim();
-		const startingPrice = parseFloat(formData.get('starting_price') as string);
-		const buyItNowPrice = formData.get('buy_it_now_price')
-			? parseFloat(formData.get('buy_it_now_price') as string)
-			: null;
-		const reservePrice = formData.get('reserve_price')
-			? parseFloat(formData.get('reserve_price') as string)
-			: null;
-		const quantity = parseInt(formData.get('quantity') as string) || 1;
-		const startDate = formData.get('start_date') as string;
-		const endDate = formData.get('end_date') as string;
-		const tagsRaw = (formData.get('tags') as string)?.trim();
+		const title = str('title');
+		const description = str('description');
+		const condition = str('condition');
+		const subcategoryId = str('subcategory_id');
+		const startingPrice = num('starting_price');
+		const buyNow = num('buy_it_now_price');
+		const reserve = num('reserve_price');
+		const quantity = Number(str('quantity') || 1);
+		const start = new Date(str('start_iso'));
+		const end = new Date(str('end_iso'));
 
-		// Validation
-		if (!title || !description || !condition || isNaN(startingPrice) || !startDate || !endDate) {
-			return fail(400, { message: 'Please fill in all required fields.' });
-		}
+		if (title.length < 3 || title.length > 120) return fail(400, { message: 'Title must be 3–120 characters.' });
+		if (description.length < 10 || description.length > 2000) return fail(400, { message: 'Description must be 10–2000 characters.' });
+		if (!CONDITIONS.includes(condition)) return fail(400, { message: 'Choose a condition.' });
+		if (!UUID.test(subcategoryId)) return fail(400, { message: 'Choose a category and subcategory.' });
 
-		if (title.length < 3) {
-			return fail(400, { message: 'Title must be at least 3 characters.' });
-		}
+		const okPrice = (n: number | null) => n === null || (Number.isFinite(n) && n > 0 && n < 99_999_999);
+		if (startingPrice === null || !okPrice(startingPrice)) return fail(400, { message: 'Enter a valid starting price.' });
+		if (!okPrice(buyNow) || !okPrice(reserve)) return fail(400, { message: 'Invalid Buy It Now or reserve price.' });
+		if (buyNow !== null && buyNow <= startingPrice) return fail(400, { message: 'Buy It Now must exceed the starting price.' });
+		if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) return fail(400, { message: 'Invalid quantity.' });
 
-		if (description.length < 10) {
-			return fail(400, { message: 'Description must be at least 10 characters.' });
-		}
+		if (isNaN(start.getTime()) || isNaN(end.getTime())) return fail(400, { message: 'Invalid dates.' });
+		if (end <= start) return fail(400, { message: 'End date must be after the start date.' });
+		if (end <= new Date()) return fail(400, { message: 'End date must be in the future.' });
 
-		if (startingPrice <= 0) {
-			return fail(400, { message: 'Starting price must be greater than zero.' });
-		}
+		let images: { url: string; isPrimary: boolean }[] = [];
+		try { images = JSON.parse(str('images_json')); } catch { /* handled below */ }
+		if (
+			!Array.isArray(images) || images.length < 1 || images.length > 8 ||
+			!images.every((i) => typeof i.url === 'string' && i.url.startsWith(PUBLIC_SUPABASE_URL))
+		) return fail(400, { message: 'Add 1–8 photos.' });
 
-		// Find chosen subcategory and category (from DB or canonical list)
-		let matchedSub = CANONICAL_SUBCATEGORIES.find((s) => s.id === subcategoryId || s.slug === subcategoryId);
-		let matchedCat = matchedSub
-			? CANONICAL_CATEGORIES.find((c) => c.id === matchedSub?.category_id)
-			: undefined;
+		// Category/subcategory names double as tags; this also validates the subcategory exists
+		const { data: sub } = await locals.supabase
+			.from('subcategories')
+			.select('id, name, slug, categories(name, slug)')
+			.eq('id', subcategoryId)
+			.maybeSingle();
+		if (!sub) return fail(400, { message: 'That subcategory does not exist.' });
 
-		// Check if the subcategory actually exists in the database
-		let dbSubcategoryExists = false;
-		if (subcategoryId) {
-			try {
-				const { data: dbSub } = await locals.supabase
-					.from('subcategories')
-					.select('id, category_id, name, slug')
-					.eq('id', subcategoryId)
-					.maybeSingle();
-
-				if (dbSub) {
-					dbSubcategoryExists = true;
-					matchedSub = dbSub;
-					const { data: dbCat } = await locals.supabase
-						.from('categories')
-						.select('id, name, slug')
-						.eq('id', dbSub.category_id)
-						.maybeSingle();
-					if (dbCat) matchedCat = dbCat;
-				}
-			} catch {
-				dbSubcategoryExists = false;
-			}
-		}
-
-		// Generate URL slug
-		const slug = generateSlug(title);
-
-		// Prepare listing payload
-		// If subcategory exists in DB, use its UUID; otherwise null to prevent foreign key violation
-		const listingPayload: Record<string, any> = {
-			seller_id: user.id,
-			title,
-			slug,
-			description,
-			condition,
-			starting_price: startingPrice,
-			current_price: startingPrice,
-			buy_it_now_price: buyItNowPrice,
-			reserve_price: reservePrice,
-			quantity,
-			status: 'active',
-			start_date: new Date(startDate).toISOString(),
-			end_date: new Date(endDate).toISOString()
-		};
-
-		if (dbSubcategoryExists) {
-			listingPayload.subcategory_id = subcategoryId;
-		}
-
-		// Insert listing with fallback for foreign key constraints
-		let listing: { id: string; slug: string } | null = null;
-		const { data: insertedListing, error: listingError } = await locals.supabase
+		// 1. Draft
+		const { data: listing, error: e1 } = await locals.supabase
 			.from('listings')
-			.insert(listingPayload)
+			.insert({
+				seller_id: user.id, subcategory_id: subcategoryId, title, slug: slugify(title),
+				description, condition, starting_price: startingPrice, current_price: startingPrice,
+				buy_it_now_price: buyNow, reserve_price: reserve, quantity, status: 'draft',
+				start_date: start.toISOString(), end_date: end.toISOString()
+			})
 			.select('id, slug')
 			.single();
-
-		if (listingError) {
-			// If insertion failed due to foreign key constraint on subcategory_id, retry with null
-			if (listingPayload.subcategory_id) {
-				delete listingPayload.subcategory_id;
-				const { data: retryListing, error: retryError } = await locals.supabase
-					.from('listings')
-					.insert(listingPayload)
-					.select('id, slug')
-					.single();
-
-				if (retryError) {
-					console.error('Listing retry error:', retryError.message);
-					return fail(500, { message: `Failed to create listing: ${retryError.message}` });
-				}
-				listing = retryListing;
-			} else {
-				console.error('Listing insert error:', listingError.message);
-				return fail(500, { message: `Failed to create listing: ${listingError.message}` });
-			}
-		} else {
-			listing = insertedListing;
+		if (e1 || !listing) {
+			console.error('listing insert:', e1);
+			return fail(500, { message: 'Could not create the listing.' });
 		}
 
-		if (!listing) {
-			return fail(500, { message: 'Failed to create listing. Please try again.' });
+		// 2. Images (roll back on failure)
+		const primaryIdx = Math.max(0, images.findIndex((i) => i.isPrimary));
+		const { error: e2 } = await locals.supabase.from('listing_images').insert(
+			images.map((img, idx) => ({
+				listing_id: listing.id, image_url: img.url, is_primary: idx === primaryIdx, display_order: idx
+			}))
+		);
+		if (e2) {
+			console.error('images:', e2);
+			await locals.supabase.from('listings').delete().eq('id', listing.id);
+			return fail(500, { message: 'Could not save the photos.' });
 		}
 
-		// Insert images (URLs were uploaded from client to Supabase Storage)
-		const imagesJson = formData.get('images_json') as string;
-		if (imagesJson) {
-			try {
-				const imageRecords = JSON.parse(imagesJson) as {
-					url: string;
-					isPrimary: boolean;
-					displayOrder: number;
-				}[];
+		// 3. Tags (non-fatal)
+		const cat = Array.isArray(sub.categories) ? sub.categories[0] : sub.categories;
+		const userTags = str('tags').split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+		const tags = [...new Set([cat?.name, sub.name, ...userTags].filter(Boolean).map((t) => String(t).toLowerCase()))].slice(0, 15);
+		const { error: e3 } = await locals.supabase.rpc('set_listing_tags', {
+			p_listing_id: listing.id, p_tags: tags
+		});
+		if (e3) console.error('tags:', e3);
 
-				if (imageRecords.length > 0) {
-					const { error: imgError } = await locals.supabase.from('listing_images').insert(
-						imageRecords.map((img) => ({
-							listing_id: listing!.id,
-							image_url: img.url,
-							is_primary: img.isPrimary,
-							display_order: img.displayOrder
-						}))
-					);
-					if (imgError) console.error('Image insert error:', imgError.message);
-				}
-			} catch (err) {
-				console.error('Failed to parse images JSON:', err);
-			}
-		}
-
-		// Insert tags (including category and subcategory tags for instant filtering)
-		const tagsList: string[] = [];
-
-		if (matchedCat) {
-			tagsList.push(matchedCat.slug.toLowerCase());
-			tagsList.push(matchedCat.name.toLowerCase());
-		}
-		if (matchedSub) {
-			tagsList.push(matchedSub.slug.toLowerCase());
-			tagsList.push(matchedSub.name.toLowerCase());
-		}
-
-		if (tagsRaw) {
-			const userTags = tagsRaw
-				.split(',')
-				.map((t) => t.trim().toLowerCase())
-				.filter(Boolean);
-			tagsList.push(...userTags);
-		}
-
-		const uniqueTags = Array.from(new Set(tagsList)).slice(0, 15);
-		if (uniqueTags.length > 0) {
-			try {
-				const { error: tagError } = await locals.supabase
-					.from('listing_tags')
-					.insert(uniqueTags.map((tag) => ({ listing_id: listing!.id, tag })));
-				if (tagError) console.error('Tag insert error:', tagError.message);
-			} catch (tagErr) {
-				console.error('Error inserting tags:', tagErr);
-			}
+		// 4. Publish
+		const { error: e4 } = await locals.supabase.from('listings').update({ status: 'active' }).eq('id', listing.id);
+		if (e4) {
+			console.error('publish:', e4);
+			return fail(500, { message: 'Saved as a draft but could not publish.' });
 		}
 
 		redirect(303, `/listings/${listing.slug}`);
 	}
 };
-
-function generateSlug(title: string): string {
-	const base = title
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-+|-+$/g, '')
-		.slice(0, 60);
-	const suffix = Math.random().toString(36).substring(2, 8);
-	return `${base}-${suffix}`;
-}
