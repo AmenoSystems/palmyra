@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
 	let {
 		activeCategory = $bindable('recentlylisted'),
 		mobileOpen = $bindable(false)
@@ -7,17 +9,18 @@
 	const categories = [
 		{ id: 'electronics', label: 'Electronics' },
 		{ id: 'fashion', label: 'Fashion' },
-		{ id: 'home', label: 'Home & Living' },
+		{ id: 'home-living', label: 'Home & Living' },
 		{ id: 'sports', label: 'Sports' },
 		{ id: 'books', label: 'Books' },
 		{ id: 'collectibles', label: 'Collectibles' },
 		{ id: 'automotive', label: 'Automotive' },
-		{ id: 'art', label: 'Art & Crafts' },
+		{ id: 'art-crafts', label: 'Art & Crafts' }
 	];
 
 	function select(categoryId: string) {
 		activeCategory = categoryId;
 		mobileOpen = false;
+		goto(`/listings?category=${categoryId}`);
 	}
 </script>
 
@@ -27,10 +30,11 @@
 			<button
 				onclick={() => select(category.id)}
 				class={`
-					px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200
-					${activeCategory === category.id
-						? 'bg-stone-800 text-white dark:bg-gray-100 dark:text-stone-800'
-						: 'bg-stone-200/70 text-stone-700 hover:bg-stone-300/70 dark:bg-stone-500/50 dark:text-gray-300 dark:hover:bg-stone-600/50'
+					px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 cursor-pointer
+					${
+						activeCategory === category.id
+							? 'bg-stone-800 text-white dark:bg-gray-100 dark:text-stone-800'
+							: 'bg-stone-200/70 text-stone-700 hover:bg-stone-300/70 dark:bg-stone-500/50 dark:text-gray-300 dark:hover:bg-stone-600/50'
 					}
 				`}
 			>
@@ -40,7 +44,7 @@
 	</div>
 </div>
 
-<div 
+<div
 	class={`
 		md:hidden overflow-hidden transition-all duration-300 ease-in-out
 		${mobileOpen ? 'max-h-125 opacity-100 py-2' : 'max-h-0 opacity-0 py-0'}
@@ -51,10 +55,11 @@
 			<button
 				onclick={() => select(category.id)}
 				class={`
-					px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200
-					${activeCategory === category.id
-						? 'bg-stone-800 text-white dark:bg-gray-100 dark:text-stone-800'
-						: 'bg-stone-200/70 text-stone-700 hover:bg-stone-300/70 dark:bg-stone-700/50 dark:text-gray-300 dark:hover:bg-stone-600/50'
+					px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 cursor-pointer
+					${
+						activeCategory === category.id
+							? 'bg-stone-800 text-white dark:bg-gray-100 dark:text-stone-800'
+							: 'bg-stone-200/70 text-stone-700 hover:bg-stone-300/70 dark:bg-stone-700/50 dark:text-gray-300 dark:hover:bg-stone-600/50'
 					}
 				`}
 			>
@@ -63,14 +68,3 @@
 		{/each}
 	</div>
 </div>
-
-<style>
-	.scrollbar-hide::-webkit-scrollbar {
-		display: none;
-	}
-
-	.scrollbar-hide {
-		-ms-overflow-style: none;
-		scrollbar-width: none;
-	}
-</style>
