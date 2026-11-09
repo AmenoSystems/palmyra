@@ -59,7 +59,29 @@ DROP POLICY IF EXISTS "Users can manage their own cart" ON public.cart_items;
 CREATE POLICY "Users can manage their own cart" ON public.cart_items
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
--- ── 3. REALTIME PUBLICATIONS ──────────────────────────────────
+-- ── 3. BIDS & BID HISTORY RLS POLICIES ─────────────────────────
+-- Grants authenticated bidders permission to insert bids and read bid history
+ALTER TABLE public.bids ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can read bids" ON public.bids;
+CREATE POLICY "Anyone can read bids" ON public.bids
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Authenticated users can insert bids" ON public.bids;
+CREATE POLICY "Authenticated users can insert bids" ON public.bids
+  FOR INSERT WITH CHECK (auth.uid() = bidder_id);
+
+ALTER TABLE public.bid_history ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can read bid history" ON public.bid_history;
+CREATE POLICY "Anyone can read bid history" ON public.bid_history
+  FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Authenticated users can insert bid history" ON public.bid_history;
+CREATE POLICY "Authenticated users can insert bid history" ON public.bid_history
+  FOR INSERT WITH CHECK (true);
+
+-- ── 4. REALTIME PUBLICATIONS ──────────────────────────────────
 -- Enable realtime for bids and orders (for live bid updates without page refresh)
 DO $$
 BEGIN

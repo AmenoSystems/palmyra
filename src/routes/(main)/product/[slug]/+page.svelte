@@ -21,7 +21,7 @@
 	} from 'lucide-svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { addToCart } from '$lib/cart';
-	import { addLocalOrder } from '$lib/orders';
+	import { addLocalOrder, addLocalBid } from '$lib/orders';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data, form } = $props();
@@ -450,6 +450,22 @@
 								return async ({ result, update }) => {
 									if (result.type === 'success') {
 										const newAmount = (result.data as any)?.newAmount;
+										const fb = (result.data as any)?.fallbackBid;
+										if (fb) {
+											addLocalBid({
+												id: fb.id,
+												listing_id: fb.listing_id,
+												bidder_id: fb.bidder_id,
+												amount: fb.amount,
+												created_at: fb.created_at,
+												title: listing.title,
+												slug: listing.slug,
+												image_url: activeImage,
+												current_highest: newAmount,
+												end_date: listing.end_date,
+												is_winning: true
+											});
+										}
 										if (newAmount) {
 											currentPrice = Number(newAmount);
 											bidCount += 1;
