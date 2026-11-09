@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Star, Clock, ShoppingCart, Gavel, Check } from 'lucide-svelte';
 	import { addToCart } from '$lib/cart';
+	import { getLocalBids } from '$lib/orders';
 
 	interface ListingImage {
 		image_url: string;
@@ -23,6 +24,7 @@
 		buy_it_now_price?: number | null;
 		end_date?: string;
 		seller_id?: string;
+		status?: string;
 		listing_images?: ListingImage[];
 		profiles?: Seller | Seller[] | null;
 		bid_count?: number;
@@ -44,7 +46,21 @@
 
 	let displayTitle = $derived(product.title ?? product.name ?? 'Untitled Product');
 	let displaySlug = $derived(product.slug ?? product.id ?? '#');
-	let displayPrice = $derived(product.current_price ?? product.starting_price ?? product.price ?? 0);
+
+	let localHighestBid = $derived.by(() => {
+		if (typeof window === 'undefined') return 0;
+		const bids = getLocalBids().filter((b) => b.listing_id === product.id);
+		return bids.reduce((max, b) => Math.max(max, Number(b.amount || 0)), 0);
+	});
+
+	let displayPrice = $derived(
+		Math.max(
+			localHighestBid,
+			Number(product.current_price ?? product.starting_price ?? product.price ?? 0)
+		)
+	);
+
+	let isSold = $derived(product.status === 'sold');
 
 	let displaySeller = $derived.by(() => {
 		if (!product.profiles) return product.sellerName ?? 'Unknown seller';
@@ -121,7 +137,7 @@
 	async function handleAddToCart(e: MouseEvent) {
 		e.preventDefault();
 		e.stopPropagation();
-		if (!product.buy_it_now_price) return;
+		if (!product.buy_it_now_price || isSold) return;
 
 		const res = await addToCart({
 			id: product.id,
@@ -202,14 +218,14 @@
 			<div class="flex items-baseline justify-between">
 				<div>
 					<span class="text-xs text-stone-500 dark:text-stone-400 block">
-						{isAuction ? 'Current Bid' : 'Price'}
+						{isSold ? 'Final Price' : isAuction ? 'Current Bid' : 'Price'}
 					</span>
 					<span class="text-lg font-bold text-stone-900 dark:text-stone-50">
 						₹{displayPrice.toLocaleString('en-IN')}
 					</span>
 				</div>
 
-				{#if product.buy_it_now_price && isAuction}
+				{#if product.buy_it_now_price && isAuction && !isSold}
 					<div class="text-right">
 						<span class="text-xs text-stone-500 dark:text-stone-400 block">Buy Now</span>
 						<span class="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
@@ -225,7 +241,7 @@
 					{#if isAuction}
 						<span class="font-medium">{displayBids} {displayBids === 1 ? 'bid' : 'bids'}</span>
 					{/if}
-					{#if timeLeft}
+					{#if timeLeft && !isSold}
 						<span class="flex items-center gap-1 {timeLeft?.urgent ? 'text-rose-500 font-semibold' : ''}">
 							<Clock class="w-3 h-3" />
 							{timeLeft?.label}
@@ -234,7 +250,7 @@
 				</div>
 
 				<!-- Add to Cart (for Buy Now items) -->
-				{#if product.buy_it_now_price}
+				{#if product.buy_it_now_price && !isSold}
 					<button
 						onclick={handleAddToCart}
 						class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all {addedToCart

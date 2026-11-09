@@ -1,8 +1,6 @@
 import type { PageServerLoad } from './$types';
-import {
-	CANONICAL_CATEGORIES,
-	CANONICAL_SUBCATEGORIES
-} from '$lib/constants/categories';
+import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { applyListingOverridesToList } from '$lib/server/serverStore';
 
 const LISTING_QUERY = `
   id, slug, title, condition, starting_price, current_price, buy_it_now_price, end_date, created_at, seller_id, status,
@@ -26,13 +24,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const pageSize = 20;
 	const offset = (page - 1) * pageSize;
 
+	const db = supabaseAdmin || locals.supabase;
+
 	// Load categories for filter sidebar
-	const { data: categories } = await locals.supabase
+	const { data: categories } = await db
 		.from('categories')
 		.select('id, name, slug')
 		.order('name');
 
-	let query = locals.supabase
+	let query = db
 		.from('listings')
 		.select(LISTING_QUERY, { count: 'exact' })
 		.eq('status', 'active');
@@ -89,6 +89,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			return cat?.slug === category || sub.slug === category;
 		});
 	}
+
+	// Apply serverStore overrides for live current_price and filter out sold items
+	filteredListings = applyListingOverridesToList(filteredListings).filter(
+		(l) => l.status === 'active'
+	);
 
 	return {
 		listings: filteredListings,

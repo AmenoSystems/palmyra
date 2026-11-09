@@ -8,7 +8,6 @@
 		Gavel,
 		ShoppingBag,
 		ShoppingCart,
-		Heart,
 		Share2,
 		UserPlus,
 		UserCheck,
@@ -21,7 +20,7 @@
 	} from 'lucide-svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { addToCart } from '$lib/cart';
-	import { addLocalOrder, addLocalBid, recordAuctionSale } from '$lib/orders';
+	import { addLocalOrder, addLocalBid, getLocalBids, getLocalOrders, recordAuctionSale } from '$lib/orders';
 	import { invalidateAll } from '$app/navigation';
 
 	let { data, form } = $props();
@@ -43,11 +42,45 @@
 	let currentPrice = $state(0);
 	let bids = $state<any[]>([]);
 	let bidCount = $state(0);
+	let listingStatus = $state('active');
+
+	function syncBidsState() {
+		listingStatus = data.listing?.status ?? listingStatus;
+		const localOrders = getLocalOrders();
+		if (localOrders.some((o) => o.listing_id === listing?.id && o.status === 'Accepted')) {
+			listingStatus = 'sold';
+		}
+		const serverPrice = Number(data.listing?.current_price ?? data.listing?.starting_price ?? 0);
+		const localBids = getLocalBids().filter((b) => b.listing_id === listing?.id);
+		if (localBids.some((b) => b.status === 'won')) {
+			listingStatus = 'sold';
+		}
+		const highestLocal = localBids.reduce((max, b) => Math.max(max, Number(b.amount || 0)), 0);
+
+		currentPrice = Math.max(serverPrice, highestLocal, currentPrice);
+
+		const combined = [...(data.bids ?? [])];
+		for (const lb of localBids) {
+			if (!combined.some((b) => b.id === lb.id || Number(b.amount) === Number(lb.amount))) {
+				combined.push({
+					id: lb.id,
+					amount: Number(lb.amount),
+					created_at: lb.created_at,
+					profiles: { username: lb.bidder_username ?? 'You' }
+				});
+			}
+		}
+		combined.sort((a, b) => Number(b.amount) - Number(a.amount));
+		bids = combined;
+		bidCount = Math.max(data.bidCount ?? 0, combined.length);
+	}
 
 	$effect(() => {
-		currentPrice = Number(data.listing?.current_price ?? data.listing?.starting_price ?? 0);
-		bids = (data.bids ?? []) as any[];
-		bidCount = data.bidCount ?? 0;
+		syncBidsState();
+		window.addEventListener('bids-updated', syncBidsState);
+		return () => {
+			window.removeEventListener('bids-updated', syncBidsState);
+		};
 	});
 
 	// Supabase Realtime subscription for live auction bids
@@ -130,13 +163,11 @@
 	let shareCopied = $state(false);
 	let addedToCart = $state(false);
 	let isFollowing = $state(false);
-	let isWatchlisted = $state(false);
 	let isBidding = $state(false);
 	let isBuying = $state(false);
 
 	$effect(() => {
 		isFollowing = !!data.isFollowing;
-		isWatchlisted = !!data.isWatchlisted;
 	});
 
 	let isOwner = $derived(
@@ -156,6 +187,10 @@
 	async function handleAddToCartClick() {
 		if (!data.currentUser) {
 			openLogin();
+			return;
+		}
+		if (listingStatus === 'sold') {
+			alert('This product has already been sold.');
 			return;
 		}
 		if (isOwner) {
@@ -196,27 +231,6 @@
 	</a>
 
 	<div class="flex items-center gap-2">
-		<!-- Watchlist toggle form -->
-		{#if data.currentUser}
-			<form
-				method="POST"
-				action="?/toggleWatchlist"
-				use:enhance={() => {
-					isWatchlisted = !isWatchlisted;
-					return async ({ update }) => update();
-				}}
-			>
-				<button
-					type="submit"
-					class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-300 dark:border-stone-700 bg-white/40 dark:bg-stone-800/40 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-700 transition-colors cursor-pointer"
-					title="Save to watchlist"
-				>
-					<Heart class="w-3.5 h-3.5 {isWatchlisted ? 'fill-rose-500 text-rose-500' : ''}" />
-					{isWatchlisted ? 'Saved' : 'Save'}
-				</button>
-			</form>
-		{/if}
-
 		<!-- Share Button -->
 		<button
 			onclick={handleShare}
@@ -422,7 +436,12 @@
 			</div>
 
 			<!-- AUCTION BIDDING FORM -->
-			{#if !timeLeft.ended && listing.status === 'active'}
+			{#if listingStatus === 'sold'}
+				<div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-sm font-semibold flex items-center gap-2">
+					<CheckCircle2 class="w-5 h-5 text-emerald-600 shrink-0" />
+					<span>This product has been sold. Bidding and purchases are closed.</span>
+				</div>
+			{:else if !timeLeft.ended && listingStatus === 'active'}
 				<div class="space-y-3">
 					<h3 class="text-sm font-semibold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
 						<Gavel class="w-4 h-4 text-indigo-500" /> Place a Bid
@@ -435,7 +454,7 @@
 								<span>You are the seller of this product. You cannot bid on your own auction.</span>
 							</div>
 
-							{#if listing.status === 'active' && bids.length > 0}
+							{#if bids.length > 0}
 								<div class="pt-2 border-t border-amber-500/20">
 									<p class="text-xs text-stone-600 dark:text-stone-300 mb-2">
 										Current Top Bid: <strong class="text-emerald-600 dark:text-emerald-400 font-bold">₹{currentPrice.toLocaleString('en-IN')}</strong>
@@ -450,6 +469,7 @@
 											return async ({ result, update }) => {
 												if (result.type === 'success' && (result.data as any)?.saleDetails) {
 													recordAuctionSale((result.data as any).saleDetails);
+													listingStatus = 'sold';
 												}
 												await update();
 											};
@@ -465,11 +485,6 @@
 											<CheckCircle2 class="w-4 h-4" /> Close Bidding & Sell to Highest Bidder (₹{currentPrice.toLocaleString('en-IN')})
 										</button>
 									</form>
-								</div>
-							{:else if listing.status === 'sold'}
-								<div class="pt-1 text-emerald-600 dark:text-emerald-400 font-semibold text-xs flex items-center gap-1.5">
-									<CheckCircle2 class="w-4 h-4" />
-									<span>This product has been sold.</span>
 								</div>
 							{/if}
 						</div>
@@ -538,7 +553,8 @@
 										}
 										bidAmount = '';
 									}
-									await update();
+									await update({ reset: false });
+									syncBidsState();
 									isBidding = false;
 								};
 							}}
@@ -597,7 +613,7 @@
 			{/if}
 
 			<!-- BUY NOW ACTION (Phase 4) -->
-			{#if listing.buy_it_now_price && listing.status === 'active'}
+			{#if listing.buy_it_now_price && listingStatus === 'active'}
 				<div class="pt-4 border-t border-stone-300/40 dark:border-stone-700/40 space-y-3">
 					<div class="flex items-center justify-between">
 						<div>
