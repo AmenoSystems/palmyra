@@ -238,23 +238,100 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const listingId = formData.get('listing_id') as string;
-		const newStatus = formData.get('new_status') as string;
+		const targetAction = formData.get('action') as string; // 'activate' | 'deactivate'
+		const requestedStatus = formData.get('new_status') as string;
 
-		if (!listingId || !newStatus) {
+		if (!listingId) {
 			return fail(400, { message: 'Invalid listing status toggle request.' });
 		}
 
-		const { error } = await locals.supabase
+		// Fetch current listing to inspect status and dates
+		const { data: currentListing } = await locals.supabase
 			.from('listings')
-			.update({ status: newStatus, updated_at: new Date().toISOString() })
+			.select('id, status, start_date, end_date')
 			.eq('id', listingId)
-			.eq('seller_id', user.id);
+			.eq('seller_id', user.id)
+			.maybeSingle();
 
-		if (error) {
-			return fail(500, { message: `Failed to update status: ${error.message}` });
+		if (!currentListing) {
+			return fail(404, { message: 'Listing not found or unauthorized.' });
 		}
 
-		return { success: true, message: `Listing status updated to ${newStatus}.` };
+		const wantActive =
+			targetAction === 'activate' ||
+			requestedStatus === 'active' ||
+			(currentListing.status !== 'active' && targetAction !== 'deactivate');
+
+		if (wantActive) {
+			// Reactivate listing: status = 'active' and ensure end_date is in the future
+			const now = new Date();
+			const currentEnd = currentListing.end_date ? new Date(currentListing.end_date) : null;
+			const futureEnd =
+				!currentEnd || currentEnd <= now
+					? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+					: currentListing.end_date;
+
+			const { error } = await locals.supabase
+				.from('listings')
+				.update({
+					status: 'active',
+					end_date: futureEnd,
+					updated_at: new Date().toISOString()
+				})
+				.eq('id', listingId)
+				.eq('seller_id', user.id);
+
+			if (error) {
+				return fail(500, { message: `Failed to activate listing: ${error.message}` });
+			}
+			return { success: true, message: 'Listing activated and visible in the marketplace.' };
+		} else {
+			// Deactivate listing: try candidate statuses accepted by check constraint
+			const candidates = ['ended', 'closed', 'draft', 'inactive', 'cancelled'];
+			let updatedSuccessfully = false;
+			let lastErrorMessage = '';
+
+			for (const statusVal of candidates) {
+				const { error } = await locals.supabase
+					.from('listings')
+					.update({
+						status: statusVal,
+						updated_at: new Date().toISOString()
+					})
+					.eq('id', listingId)
+					.eq('seller_id', user.id);
+
+				if (!error) {
+					updatedSuccessfully = true;
+					break;
+				}
+				lastErrorMessage = error.message;
+				if (!error.message.includes('check constraint') && error.code !== '23514') {
+					break;
+				}
+			}
+
+			// If check constraint only allows 'active' and 'sold', expire end_date to hide from marketplace
+			if (!updatedSuccessfully) {
+				const pastDate = new Date(Date.now() - 1000).toISOString();
+				const { error: dateError } = await locals.supabase
+					.from('listings')
+					.update({
+						end_date: pastDate,
+						updated_at: new Date().toISOString()
+					})
+					.eq('id', listingId)
+					.eq('seller_id', user.id);
+
+				if (dateError) {
+					return fail(500, {
+						message: `Failed to deactivate listing: ${lastErrorMessage || dateError.message}`
+					});
+				}
+			}
+
+			return { success: true, message: 'Listing deactivated successfully.' };
+		}
 	},
 
 	closeAndSell: async ({ request, locals }) => {

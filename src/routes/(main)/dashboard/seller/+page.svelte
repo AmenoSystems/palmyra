@@ -106,8 +106,17 @@
 			.reduce((sum, r) => sum + (Number(r.price) || 0), 0)
 	);
 
+	function isItemActive(item: any): boolean {
+		if (!item || item.status !== 'active') return false;
+		if (item.end_date && new Date(item.end_date) <= new Date()) return false;
+		return true;
+	}
+
 	let filteredListings = $derived.by(() => {
 		if (listingFilter === 'all') return data.listings;
+		if (listingFilter === 'active') return data.listings.filter((l: any) => isItemActive(l));
+		if (listingFilter === 'sold') return data.listings.filter((l: any) => l.status === 'sold');
+		if (listingFilter === 'inactive') return data.listings.filter((l: any) => !isItemActive(l) && l.status !== 'sold');
 		return data.listings.filter((l: any) => l.status === listingFilter);
 	});
 
@@ -185,7 +194,7 @@
 			class="p-4 rounded-2xl backdrop-blur-lg bg-stone-200/30 dark:bg-stone-500/30 border border-white/20 dark:border-gray-700/30 text-center"
 		>
 			<span class="text-xs text-stone-500 dark:text-stone-400 block mb-1">Active</span>
-			<span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{data.stats.activeListings}</span>
+			<span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{data.listings.filter((l: any) => isItemActive(l)).length}</span>
 		</div>
 
 		<div
@@ -466,18 +475,17 @@
 						<!-- Right: Status Toggle & Actions -->
 						<div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-200 dark:border-stone-700">
 							<span
-								class="px-2.5 py-1 text-xs font-semibold rounded-full border uppercase {item.status ===
-								'active'
-									? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-									: item.status === 'sold'
-										? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30'
+								class="px-2.5 py-1 text-xs font-semibold rounded-full border uppercase {item.status === 'sold'
+									? 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/30'
+									: isItemActive(item)
+										? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
 										: 'bg-stone-500/10 text-stone-600 dark:text-stone-400 border-stone-500/30'}"
 							>
-								{item.status}
+								{item.status === 'sold' ? 'sold' : isItemActive(item) ? 'active' : 'inactive'}
 							</span>
 
 							<!-- Seller Option: Close Auction & Sell to Top Bidder -->
-							{#if item.status === 'active' && incomingBids.some((b) => b.listing_id === item.id)}
+							{#if isItemActive(item) && incomingBids.some((b) => b.listing_id === item.id)}
 								<form
 									method="POST"
 									action="?/closeAndSell"
@@ -512,14 +520,19 @@
 									<input type="hidden" name="listing_id" value={item.id} />
 									<input
 										type="hidden"
+										name="action"
+										value={isItemActive(item) ? 'deactivate' : 'activate'}
+									/>
+									<input
+										type="hidden"
 										name="new_status"
-										value={item.status === 'active' ? 'inactive' : 'active'}
+										value={isItemActive(item) ? 'ended' : 'active'}
 									/>
 									<button
 										type="submit"
 										class="px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-700 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors cursor-pointer"
 									>
-										{item.status === 'active' ? 'Deactivate' : 'Activate'}
+										{isItemActive(item) ? 'Deactivate' : 'Activate'}
 									</button>
 								</form>
 							{/if}

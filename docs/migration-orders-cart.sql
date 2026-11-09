@@ -109,3 +109,16 @@ EXCEPTION
   WHEN OTHERS THEN
     NULL;
 END $$;
+
+-- ── 5. LISTING STATUS CONSTRAINT ───────────────────────────────
+-- Broaden check constraint to permit inactive, ended, closed, draft, cancelled
+DO $$
+BEGIN
+  ALTER TABLE public.listings DROP CONSTRAINT IF EXISTS listings_status_check;
+  ALTER TABLE public.listings ADD CONSTRAINT listings_status_check 
+    CHECK (status IN ('active', 'inactive', 'ended', 'closed', 'draft', 'cancelled', 'sold'));
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;
+END $$;
+
