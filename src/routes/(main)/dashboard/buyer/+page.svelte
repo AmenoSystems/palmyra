@@ -228,7 +228,7 @@
 						<!-- Left: Product Image & Details -->
 						<div class="flex items-center gap-4 min-w-0">
 							<a
-								href={`/product/${order.slug}`}
+								href={`/listings/${order.slug}`}
 								class="w-20 aspect-[4/3] rounded-xl overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
 							>
 								{#if order.image_url}
@@ -246,7 +246,7 @@
 
 							<div class="min-w-0">
 								<a
-									href={`/product/${order.slug}`}
+									href={`/listings/${order.slug}`}
 									class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm sm:text-base"
 								>
 									{order.title}
@@ -317,7 +317,7 @@
 					>
 						<div class="flex items-center gap-3">
 							<a
-								href={`/product/${bid.slug}`}
+								href={`/listings/${bid.slug}`}
 								class="w-16 aspect-[4/3] rounded-lg overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
 							>
 								{#if bid.image_url}
@@ -331,7 +331,7 @@
 
 							<div class="min-w-0 flex-1">
 								<a
-									href={`/product/${bid.slug}`}
+									href={`/listings/${bid.slug}`}
 									class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm"
 								>
 									{bid.title}
@@ -369,7 +369,7 @@
 						</div>
 
 						<a
-							href={`/product/${bid.slug}`}
+							href={`/listings/${bid.slug}`}
 							class="w-full py-2 rounded-xl bg-stone-200/60 dark:bg-stone-700/40 hover:bg-stone-300 dark:hover:bg-stone-600 text-xs font-semibold text-stone-800 dark:text-stone-200 flex items-center justify-center gap-1 transition-colors"
 						>
 							View Auction <ExternalLink class="w-3.5 h-3.5" />
@@ -481,7 +481,7 @@
 									<!-- Order Item Details -->
 									<div class="flex items-center gap-4">
 										<a
-											href={`/product/${order.slug}`}
+											href={`/listings/${order.slug}`}
 											class="w-16 sm:w-20 aspect-[4/3] rounded-xl overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
 										>
 											{#if order.image_url}
@@ -499,7 +499,7 @@
 
 										<div class="min-w-0 flex-1">
 											<a
-												href={`/product/${order.slug}`}
+												href={`/listings/${order.slug}`}
 												class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm sm:text-base"
 											>
 												{order.title}
@@ -662,7 +662,7 @@
 									<!-- Bid Item Details -->
 									<div class="flex items-center gap-4">
 										<a
-											href={`/product/${bid.slug}`}
+											href={`/listings/${bid.slug}`}
 											class="w-16 sm:w-20 aspect-[4/3] rounded-xl overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
 										>
 											{#if bid.image_url}
@@ -680,7 +680,7 @@
 
 										<div class="min-w-0 flex-1">
 											<a
-												href={`/product/${bid.slug}`}
+												href={`/listings/${bid.slug}`}
 												class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm sm:text-base"
 											>
 												{bid.title}
@@ -704,14 +704,14 @@
 										<div class="hidden sm:block shrink-0">
 											{#if !bid.is_winning && !bid.is_ended}
 												<a
-													href={`/product/${bid.slug}`}
+													href={`/listings/${bid.slug}`}
 													class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-colors"
 												>
 													Raise Bid <ArrowRight class="w-3.5 h-3.5" />
 												</a>
 											{:else}
 												<a
-													href={`/product/${bid.slug}`}
+													href={`/listings/${bid.slug}`}
 													class="px-3.5 py-2 rounded-xl border border-stone-300 dark:border-stone-700 text-xs font-medium text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors flex items-center gap-1.5"
 												>
 													View Auction <ExternalLink class="w-3.5 h-3.5" />
@@ -812,7 +812,7 @@
 
 										<div class="sm:hidden shrink-0">
 											<a
-												href={`/product/${bid.slug}`}
+												href={`/listings/${bid.slug}`}
 												class="text-xs font-semibold text-indigo-600 hover:underline"
 											>
 												View →

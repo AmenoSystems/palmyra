@@ -44,7 +44,7 @@
 	// Form fields
 	let title = $state('');
 	let description = $state('');
-	let condition = $state('brand_new');
+	let condition = $state('new');
 	let startingPrice = $state('');
 	let buyItNowPrice = $state('');
 	let reservePrice = $state('');
@@ -65,12 +65,11 @@
 	}
 
 	const CONDITIONS = [
-		{ value: 'brand_new', label: 'Brand New' },
+		{ value: 'new', label: 'Brand New' },
 		{ value: 'like_new', label: 'Like New' },
-		{ value: 'open_box', label: 'New – Open Box' },
-		{ value: 'used_good', label: 'Used – Good' },
-		{ value: 'used_fair', label: 'Used – Fair' },
-		{ value: 'for_parts', label: 'For Parts / Not Working' }
+		{ value: 'good', label: 'Used - Good' },
+		{ value: 'fair', label: 'Used - Fair' },
+		{ value: 'poor', label: 'Poor' }
 	];
 
 	// ── Navigation ────────────────────────────────────────────────
@@ -82,7 +81,7 @@
 		if (step > 1) step--;
 	}
 
-	function canProceedStep2(): boolean {
+	function canProceedStep2(): number | boolean {
 		return (
 			title.trim().length >= 3 &&
 			description.trim().length &&

@@ -11,15 +11,13 @@
 		CircleUser,
 		MapPin,
 		User,
-		Package,
 		ShoppingBag,
-		PlusCircle,
 		Store
 	} from 'lucide-svelte';
 	import Authmodal from '$lib/components/AuthModal.svelte';
 	import ProductListingModal from '$lib/components/ProductListingModal.svelte';
 	import { supabase } from '$lib/supabaseClient';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll, beforeNavigate } from '$app/navigation';
 	import { getLocalCart } from '$lib/cart';
 
 	let { children, data } = $props();
@@ -30,10 +28,11 @@
 
 	let isDark = $state(false);
 	let mobileMenuOpen = $state(false);
-	let activeCategory = $state('recentlylisted');
+	let activeCategory = $state('');
 	let showAuthModal = $state(false);
 	let showListingModal = $state(false);
 	let showDropdown = $state(false);
+	let dropdownEl = $state<HTMLElement>();
 
 	// Cart count state (synced with both server and client localStorage)
 	let cartCount = $state(0);
@@ -72,6 +71,15 @@
 			if ((session?.user?.id ?? null) !== (data.user?.id ?? null)) invalidateAll();
 		});
 		return () => subscription.unsubscribe();
+	});
+
+	beforeNavigate((nav) => {
+		showDropdown = false;
+
+		const targetPath = nav.to?.url.pathname ?? '/';
+		if (targetPath !== '/listings') {
+			activeCategory = '';
+		}
 	});
 
 	async function signOut() {
@@ -117,6 +125,18 @@
 		applyTheme(stored ? stored === 'dark' : prefersDark);
 	});
 </script>
+
+<svelte:window
+	onpopstate={() => (showDropdown = false)}
+	onclick={(e) => {
+		if (showDropdown && dropdownEl && !dropdownEl.contains(e.target as Node)) {
+			showDropdown = false;
+		}
+	}}
+	onkeydown={(e) => {
+		if (e.key === 'Escape') showDropdown = false;
+	}}
+/>
 
 <style>
 	@font-face {
@@ -174,7 +194,7 @@
 				</div>
 
 				<!-- Location -->
-				<div class="flex items-center mt-1">
+				<div class="flex items-center mt-1 ml-6 gap-1.5">
 					<MapPin class="hidden lg:block text-stone-800 dark:text-stone-100 w-4 h-4" />
 					<div class="hidden lg:block items-center justify-start w-auto">
 						<button
@@ -210,10 +230,9 @@
 					<!-- Start Selling button (desktop) -->
 					<button
 						onclick={handleStartSelling}
-						class="hidden md:flex items-center gap-1.5 py-2 px-4 rounded-full bg-stone-800 hover:bg-stone-900 dark:bg-stone-100 dark:hover:bg-stone-300 transition-colors text-stone-200 dark:text-stone-800 font-semibold text-xs min-h-11 shadow-sm cursor-pointer"
+						class="hidden md:flex items-center gap-1.5 py-2 px-4 rounded-full bg-stone-800 hover:bg-stone-900 dark:bg-stone-100 dark:hover:bg-stone-300 transition-colors text-stone-200 dark:text-stone-800 font-semibold text-sm min-h-11 shadow-sm cursor-pointer"
 						aria-label="Sell a product"
 					>
-						<PlusCircle class="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
 						Start Selling
 					</button>
 
@@ -236,9 +255,12 @@
 					<!-- User Profile Button / Dropdown -->
 					{#if user}
 						<!-- User is signed in -->
-						<div class="relative">
+						<div class="relative" bind:this={dropdownEl}>
 							<button
-								onclick={() => (showDropdown = !showDropdown)}
+								onclick={(e) => {
+										e.stopPropagation();
+										showDropdown = !showDropdown;
+								}}
 								class="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors min-h-11 cursor-pointer"
 								aria-label="User menu"
 							>
@@ -248,7 +270,7 @@
 									class="w-8 h-8 rounded-full object-cover border border-white/40 dark:border-stone-600"
 								/>
 								<span
-									class="text-xs font-semibold text-stone-800 dark:text-stone-200 hidden sm:inline truncate max-w-[100px]"
+									class="text-sm font-semibold text-stone-800 dark:text-stone-200 hidden sm:inline truncate max-w-[100px]"
 								>
 									{profile?.username || user.email?.split('@')[0]}
 								</span>
@@ -323,7 +345,6 @@
 											}}
 											class="w-full px-4 py-2 text-left text-sm text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-700 flex items-center gap-2.5 transition-colors cursor-pointer"
 										>
-											<PlusCircle class="w-4 h-4 text-teal-600" />
 											Publish Product
 										</button>
 
@@ -434,7 +455,6 @@
 			class="flex items-center gap-2 px-4 py-3 rounded-full bg-stone-900 dark:bg-stone-100 text-stone-100 dark:text-stone-900 shadow-2xl text-xs font-bold min-h-12 cursor-pointer"
 			aria-label="Start Selling"
 		>
-			<PlusCircle class="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
 			Start Selling
 		</button>
 	</div>

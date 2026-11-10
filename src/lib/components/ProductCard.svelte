@@ -12,6 +12,7 @@
 	interface Seller {
 		username: string;
 		rating?: number;
+		total_reviews?: number;
 	}
 
 	interface Listing {
@@ -61,24 +62,11 @@
 	);
 
 	let isSold = $derived(product.status === 'sold');
-
-	let displaySeller = $derived.by(() => {
-		if (!product.profiles) return product.sellerName ?? 'Unknown seller';
-		if (Array.isArray(product.profiles)) {
-			return product.profiles[0]?.username ?? product.sellerName ?? 'Unknown seller';
-		}
-		return product.profiles.username ?? product.sellerName ?? 'Unknown seller';
-	});
-
-	let displayRating = $derived.by(() => {
-		if (!product.profiles) return product.reviewScore ?? 0;
-		if (Array.isArray(product.profiles)) {
-			return product.profiles[0]?.rating ?? product.reviewScore ?? 0;
-		}
-		return product.profiles.rating ?? product.reviewScore ?? 0;
-	});
-
-	let filledStars = $derived(Math.round(displayRating));
+	let seller = $derived(Array.isArray(product.profiles) ? product.profiles[0] : product.profiles);
+	let displaySeller = $derived(seller?.username ?? product.sellerName ?? 'Unknown seller');
+	let displayRating = $derived(Number(seller?.rating ?? product.reviewScore ?? 0));
+	let reviewCount = $derived(seller?.total_reviews ?? product.reviewCount ?? 0);
+	let shownRating = $derived(reviewCount > 0 ? Math.round(displayRating * 2) / 2 : 0);
 	let displayBids = $derived(product.bid_count ?? product.bids ?? 0);
 
 	// Primary image (4:3)
@@ -160,7 +148,7 @@
 </script>
 
 <a
-	href={`/product/${displaySlug}`}
+	href={`/listings/${displaySlug}`}
 	class="group relative flex flex-col justify-between rounded-2xl border border-white/20 bg-stone-100/40 shadow-lg backdrop-blur-lg transition-all duration-200 hover:-translate-y-1 hover:shadow-2xl dark:border-gray-700/30 dark:bg-stone-800/40 overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-400"
 	aria-label={displayTitle}
 >
@@ -197,23 +185,28 @@
 			</div>
 
 			<!-- Stars -->
-			{#if displayRating > 0}
-				<div class="flex items-center gap-0.5 mb-2.5">
-					{#each Array.from({ length: 5 }, (_, i) => i) as i (i)}
-						<Star
-							class={'h-3 w-3 ' +
-								(i < filledStars
-									? 'fill-amber-400 text-amber-400'
-									: 'text-stone-300 dark:text-gray-600')}
-						/>
+			<div class="flex items-center gap-0.5 justify-between">
+				<div>
+					{#each [0, 1, 2, 3, 4] as i (i)}
+						{@const fill = Math.max(0, Math.min(1, shownRating - i))}
+						<span class="relative inline-block h-3 w-3 shrink-0">
+							<!-- empty star underneath -->
+							<Star class="absolute inset-0 h-3 w-3 text-stone-400 dark:text-gray-600" />
+							<!-- filled star on top, clipped to the fill fraction -->
+							<span class="absolute inset-0 overflow-hidden" style="width: {fill * 100}%">
+								<Star class="h-3 w-3 max-w-none shrink-0 fill-stone-800 text-stone-800" />
+							</span>
+						</span>
 					{/each}
-					<span class="ml-1 text-xs text-stone-500 dark:text-gray-400">{displayRating.toFixed(1)}</span>
 				</div>
-			{/if}
+				<span class="ml-1 text-xs text-stone-500 dark:text-gray-400">
+					{reviewCount > 0 ? `${displayRating.toFixed(1)} (${reviewCount})` : '0 reviews'}
+				</span>
+			</div>
 		</div>
 
 		<!-- Price & Actions Footer -->
-		<div class="mt-3 pt-3 border-t border-stone-200/50 dark:border-stone-700/50 space-y-2">
+		<div class="mt-3 pt-3 border-t border-stone-400/30 dark:border-stone-700/50 space-y-2">
 			<!-- Pricing Row -->
 			<div class="flex items-baseline justify-between">
 				<div>
@@ -255,14 +248,14 @@
 						onclick={handleAddToCart}
 						class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all {addedToCart
 							? 'bg-emerald-600 text-white'
-							: 'bg-stone-200/70 dark:bg-stone-700/60 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-800 dark:text-stone-100'}"
+							: 'bg-stone-200/70 dark:bg-stone-700/60 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-800 dark:text-stone-100 border border-stone-400/30 dark:border-stone-600 hover:shadow-sm'}"
 						title="Add to cart"
 						aria-label="Add to cart"
 					>
 						{#if addedToCart}
 							<Check class="w-3.5 h-3.5" /> Added
 						{:else}
-							<ShoppingCart class="w-3.5 h-3.5" /> Cart
+							+ <ShoppingCart class="w-3.5 h-3.5" />
 						{/if}
 					</button>
 				{/if}

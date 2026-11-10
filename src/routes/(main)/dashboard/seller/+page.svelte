@@ -3,21 +3,14 @@
 	import {
 		Package,
 		CheckCircle,
-		XCircle,
 		AlertCircle,
-		Clock,
 		PlusCircle,
 		Check,
 		X,
 		ShoppingBag,
 		Eye,
-		TrendingUp,
-		DollarSign,
 		ExternalLink,
 		Gavel,
-		ToggleLeft,
-		ToggleRight,
-		User
 	} from 'lucide-svelte';
 	import ProductListingModal from '$lib/components/ProductListingModal.svelte';
 	import { getLocalOrders, updateLocalOrderStatus, getLocalBids, recordAuctionSale } from '$lib/orders';
@@ -300,7 +293,7 @@
 						<!-- Left: Product & Buyer Info -->
 						<div class="flex items-center gap-4 min-w-0">
 							<a
-								href={`/product/${req.slug}`}
+								href={`/listings/${req.slug}`}
 								class="w-16 sm:w-20 aspect-[4/3] rounded-xl overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
 							>
 								{#if req.image_url}
@@ -314,7 +307,7 @@
 
 							<div class="min-w-0">
 								<a
-									href={`/product/${req.slug}`}
+									href={`/listings/${req.slug}`}
 									class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm sm:text-base"
 								>
 									{req.title}
@@ -430,7 +423,7 @@
 						<!-- Left: Product Image & Info -->
 						<div class="flex items-center gap-4 min-w-0">
 							<a
-								href={`/product/${item.slug}`}
+								href={`/listings/${item.slug}`}
 								class="w-20 aspect-[4/3] rounded-xl overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
 							>
 								{#if item.primary_image}
@@ -448,7 +441,7 @@
 
 							<div class="min-w-0">
 								<a
-									href={`/product/${item.slug}`}
+									href={`/listings/${item.slug}`}
 									class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm sm:text-base"
 								>
 									{item.title}
@@ -550,7 +543,7 @@
 							{/if}
 
 							<a
-								href={`/product/${item.slug}`}
+								href={`/listings/${item.slug}`}
 								class="p-2 rounded-lg bg-stone-200/60 dark:bg-stone-700/40 hover:bg-stone-300 text-stone-700 dark:text-stone-300"
 								title="View public product page"
 							>
@@ -584,7 +577,7 @@
 					<div class="py-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-4">
 						<div class="min-w-0">
 							<a
-								href={`/product/${bid.listing_slug}`}
+								href={`/listings/${bid.listing_slug}`}
 								class="font-semibold text-stone-900 dark:text-stone-100 hover:underline text-sm block"
 							>
 								{bid.listing_title}
@@ -607,7 +600,7 @@
 									₹{bid.amount.toLocaleString('en-IN')}
 								</span>
 								<a
-									href={`/product/${bid.listing_slug}`}
+									href={`/listings/${bid.listing_slug}`}
 									class="text-xs text-indigo-500 hover:underline"
 								>
 									View Listing →

@@ -24,12 +24,11 @@
 	];
 
 	const CONDITIONS = [
-		{ value: 'brand_new', label: 'Brand new' },
+		{ value: 'new', label: 'Brand new' },
 		{ value: 'like_new', label: 'Like new' },
-		{ value: 'open_box', label: 'Open box' },
-		{ value: 'used_good', label: 'Good' },
-		{ value: 'used_fair', label: 'Fair' },
-		{ value: 'for_parts', label: 'Poor / for parts' }
+		{ value: 'good', label: 'Used - Good' },
+		{ value: 'fair', label: 'Used - Fair' },
+		{ value: 'poor', label: 'Poor' }
 	];
 
 	const LISTING_TYPES = [

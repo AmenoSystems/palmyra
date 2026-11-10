@@ -149,7 +149,7 @@ export const actions: Actions = {
 		}
 
 		// Redirect to dedicated canonical product page
-		redirect(303, `/product/${listing.slug}`);
+		redirect(303, `/listings/${listing.slug}`);
 	}
 };
 

@@ -65,17 +65,9 @@
 <div class="max-w-4xl mx-auto space-y-6">
 	<!-- Page Header -->
 	<div class="flex items-center justify-between">
-		<div class="flex items-center gap-3">
-			<a
-				href="/listings"
-				class="p-2 rounded-full hover:bg-stone-200/50 dark:hover:bg-stone-700/50 transition-colors text-stone-700 dark:text-stone-300"
-				aria-label="Back to listings"
-			>
-				<ArrowLeft class="w-5 h-5" />
-			</a>
+		<div class="flex items-center gap-3 px-2">
 			<div>
 				<h1 class="text-2xl font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
-					<ShoppingCart class="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
 					Your Shopping Cart
 				</h1>
 				<p class="text-xs text-stone-500 dark:text-stone-400">
@@ -86,7 +78,7 @@
 
 		<a
 			href="/listings"
-			class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+			class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400 hover:underline"
 		>
 			Continue Shopping <ArrowRight class="w-3.5 h-3.5" />
 		</a>
@@ -135,7 +127,7 @@
 			</p>
 			<a
 				href="/listings"
-				class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors shadow-lg"
+				class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-stone-800 hover:bg-stone-900 text-white font-semibold text-sm transition-colors shadow-lg"
 			>
 				Browse Listings <ArrowRight class="w-4 h-4" />
 			</a>
@@ -151,7 +143,7 @@
 					>
 						<!-- Image -->
 						<a
-							href={`/product/${item.slug}`}
+							href={`/listings/${item.slug}`}
 							class="w-24 aspect-[4/3] rounded-xl overflow-hidden bg-stone-300 dark:bg-stone-700 shrink-0"
 						>
 							{#if item.image_url}
@@ -171,7 +163,7 @@
 						<!-- Info -->
 						<div class="flex-1 min-w-0">
 							<a
-								href={`/product/${item.slug}`}
+								href={`/listings/${item.slug}`}
 								class="font-semibold text-stone-900 dark:text-stone-100 hover:underline line-clamp-1 text-sm sm:text-base"
 							>
 								{item.title}
